@@ -64,4 +64,21 @@ struct InstanceTable {
         )
         try database.run(query)
     }
+
+    /**
+     Get a value for a path.
+     - Parameter path: The path to search for in the table.
+     - Returns: The value for the row with the given path, or `nil`, if the value column is `NULL` or if no row exists for the given path.
+     */
+    func value(for model: Int, instance: Int) throws -> InstanceStatus? {
+        let query = table
+            .filter(modelId == model && instanceId == instance)
+            .order(timestamp.desc)
+            .limit(1)
+        guard let row = try database.pluck(query) else {
+            return nil
+        }
+        let raw = UInt8(row[value])
+        return .init(rawValue: raw)
+    }
 }

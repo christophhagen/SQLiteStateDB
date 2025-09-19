@@ -8,7 +8,7 @@ protocol DoubleConvertible {
 
 extension Double {
 
-    func asDouble<T>(of: T.Type = T.self) -> T? where T: DoubleConvertible {
+    func converted<T>(to: T.Type = T.self) -> T? where T: DoubleConvertible {
         .init(doubleValue: self)
     }
 }

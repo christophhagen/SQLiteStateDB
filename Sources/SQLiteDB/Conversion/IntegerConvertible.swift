@@ -8,7 +8,14 @@ protocol IntegerConvertible {
 
 extension Int64 {
 
-    func asInt<T>(of: T.Type = T.self) -> T? where T: IntegerConvertible {
+    func converted<T>(to: T.Type = T.self) -> T? where T: IntegerConvertible {
         .init(intValue: self)
+    }
+
+    func converted<T>(to type: T.Type = T.self) -> T? where T: RawRepresentable, T.RawValue: IntegerConvertible {
+        guard let raw = T.RawValue.init(intValue: self) else {
+            return nil
+        }
+        return T.init(rawValue: raw)
     }
 }

@@ -2,6 +2,13 @@ import Foundation
 import SQLite
 import StateModel
 
+extension Optional {
+
+    func asResult<T>() -> T {
+        self as! T
+    }
+}
+
 /**
  A SQLite Database suitable to act as a database for StateModel.
 
@@ -64,102 +71,194 @@ public final class SQLiteDatabase<Encoder: GenericEncoder, Decoder: GenericDecod
     }
 
 
-    // MARK: Throwing functions
+    // MARK: Generic functions
 
     /**
      Internal function to set properties.
      */
-    private func setThrowing<Value>(_ value: Value, for path: KeyPath) throws where Value: Codable {
+    private func storeThrowing<Value>(_ value: Value, for path: KeyPath) throws where Value: Codable {
         switch Value.self {
         case is InstanceStatus.Type:
             // Catch instance status updates first,
             // which are additionally stored in a separate table for selecting models
-            let status = value as! InstanceStatus
-            // If the instance status really targets an instance, also save the info to an additional table
-            // This is used to improve the select queries, where only the most recent values are of interest
-            if path.property == PropertyKey.instanceId {
-                try instanceTable.update(value: status, model: path.model, instance: path.instance)
-            }
-            // We still need to save the full sample, to get the history
-            return try integerTable.insert(value: status.rawValue.intValue, for: path)
+            try storeStatus(value as! InstanceStatus, for: path)
         case is IntegerConvertible.Type:
             // Detect integers next, since those are assumed the most likely
-            return try integerTable.insert(value: (value as! IntegerConvertible).intValue, for: path)
+            try storeInt((value as! IntegerConvertible).intValue, for: path)
         case is OptionalIntegerConvertible.Type:
-            return try integerTable.insert(value: (value as! OptionalIntegerConvertible).intValue, for: path)
+            try storeInt((value as! OptionalIntegerConvertible).intValue, for: path)
         case is DoubleConvertible.Type:
-            return try doubleTable.insert(value: (value as! DoubleConvertible).doubleValue, for: path)
+            try storeDouble((value as! DoubleConvertible).doubleValue, for: path)
         case is OptionalDoubleConvertible.Type:
-            return try doubleTable.insert(value: (value as! OptionalDoubleConvertible).doubleValue, for: path)
+            try storeDouble((value as! OptionalDoubleConvertible).doubleValue, for: path)
         case is String.Type:
-            return try stringTable.insert(value: (value as! String), for: path)
+            try storeString(value as! String?, for: path)
         case is String?.Type:
             // We check against the type instead of using `as?`,
             // since this would match other nil values as well
-            return try stringTable.insert(value: (value as! String?), for: path)
+            try storeString(value as! String?, for: path)
         case is Data.Type:
-            return try binaryTable.insert(value: (value as! Data), for: path)
+            try storeData(value as! Data?, for: path)
         case is Data?.Type:
             // We check against the type instead of using `as?`,
             // since this would match other nil values as well
-            return try binaryTable.insert(value: (value as! Data?), for: path)
+            try storeData(value as! Data?, for: path)
         case is CodableOptional.Type:
-            // For Codable types, unpack one level of Optionals which is
-            // handled by SQLite NULL values
-            let optionalValue = value as! CodableOptional
-            if optionalValue.isNil {
-                return try binaryTable.insert(value: nil, for: path)
-            } else {
-                let data = try optionalValue.encodeWrapped(with: encoder)
-                return try binaryTable.insert(value: data, for: path)
-            }
+            try storeOptionalCodable(value as! CodableOptional, for: path)
         default:
-            // Encode non-optionals
-            let data = try encoder.encode(value)
-            return try binaryTable.insert(value: data, for: path)
-
+            try storeCodable(value, for: path)
         }
     }
 
-    private func getThrowing<Value>(_ path: KeyPath) throws -> Value? where Value: Codable {
+    private func readThrowing<Value>(_ path: KeyPath) throws -> Value? where Value: Codable {
         switch Value.self {
         case is InstanceStatus.Type:
             // First match instance information
             // The info is still stored in the integer table,
             // so we get the info from there
-            return try integerTable.value(for: path)?.asInt(of: UInt8.self).map { InstanceStatus(rawValue: $0) as! Value }
+            return try readStatus(path).asResult()
         case let IntValue as IntegerConvertible.Type:
             // Get all integer values
-            return try integerTable.value(for: path)?.asInt(of: IntValue.self).map { $0 as! Value }
+            return try readInt(path)?.converted(to: IntValue.self).asResult()
         case let IntValue as OptionalIntegerConvertible.Type:
-            return try integerTable.optionalValue(for: path).map { IntValue.init(intValue: $0) as! Value }
+            return try readOptionalInt(path).map { IntValue.init(intValue: $0) as! Value }
         case let DoubleValue as DoubleConvertible.Type:
-            return try doubleTable.value(for: path)?.asDouble(of: DoubleValue.self).map { $0 as! Value }
+            return try readDouble(path)?.converted(to: DoubleValue.self).asResult()
         case let DoubleValue as OptionalDoubleConvertible.Type:
-            return try doubleTable.optionalValue(for: path).map { DoubleValue.init(doubleValue: $0) as! Value }
+            return try readOptionalDouble(path).map { DoubleValue.init(doubleValue: $0) as! Value }
         case is String.Type:
-            return try stringTable.value(for: path).map { $0 as! Value }
+            return try readString(path).asResult()
         case is String?.Type:
-            return try stringTable.optionalValue(for: path).map { $0 as! Value }
+            return try readOptionalString(path).asResult()
         case is Data.Type:
-            return try binaryTable.value(for: path).map { $0 as! Value }
+            return try readData(path).asResult()
         case is Data?.Type:
-            return try binaryTable.optionalValue(for: path).map { $0 as! Value }
+            return try readOptionalData(path).asResult()
         case let OptionalValue as CodableOptional.Type:
-            guard let data = try binaryTable.optionalValue(for: path) else {
-                return nil
-            }
-            if let data {
-                return (try OptionalValue.decodeWrapped(from: data, with: decoder) as! Value)
-            } else {
-                return (OptionalValue.nilValue as! Value)
-            }
+            return try read(codableOptional: OptionalValue.self, path).asResult()
         default:
-            guard let data = try binaryTable.value(for: path) else {
-                return nil
-            }
-            return try decoder.decode(Value.self, from: data)
+            return try read(codable: Value.self, path)
         }
+    }
+
+    // MARK: Typed setters
+
+    func storeStatus(_ value: InstanceStatus, for path: KeyPath) throws {
+        // If the instance status really targets an instance, also save the info to an additional table
+        // This is used to improve the select queries, where only the most recent values are of interest
+        if path.property == PropertyKey.instanceId {
+            try instanceTable.update(value: value, model: path.model, instance: path.instance)
+        }
+        // We still need to save the full sample, to get the history
+        return try storeInt(value.rawValue.intValue, for: path)
+    }
+
+    func storeOptionalCodable(_ value: any CodableOptional, for path: KeyPath) throws {
+        // For Codable types, unpack one level of Optionals which is
+        // handled by SQLite NULL values
+        if value.isNil {
+            try binaryTable.insert(value: nil, for: path)
+        } else {
+            let data: Data? = try value.encodeWrapped(with: encoder)
+            try storeData(data, for: path)
+        }
+    }
+
+    @inline(__always)
+    func storeCodable<Value: Codable>(_ value: Value, for path: KeyPath) throws {
+        // Encode non-optionals
+        let data: Data? = try encoder.encode(value)
+        return try storeData(data, for: path)
+    }
+
+    @inline(__always)
+    func storeInt(_ value: Int64?, for path: KeyPath) throws {
+        try integerTable.insert(value: value, for: path)
+    }
+
+    @inline(__always)
+    func storeDouble(_ value: Double?, for path: KeyPath) throws {
+        try doubleTable.insert(value: value, for: path)
+    }
+
+    @inline(__always)
+    func storeString(_ value: String?, for path: KeyPath) throws {
+        try stringTable.insert(value: value, for: path)
+    }
+
+    @inline(__always)
+    func storeData(_ value: Data?, for path: KeyPath) throws {
+        try binaryTable.insert(value: value, for: path)
+    }
+
+    // MARK: Typed getters
+
+    @inline(__always)
+    func readStatus(_ path: KeyPath) throws -> InstanceStatus? {
+        if path.property == PropertyKey.instanceId {
+            return try instanceTable.value(for: path.model, instance: path.instance)
+        }
+        return try readInt(path)?.converted(to: InstanceStatus.self)
+    }
+
+    @inline(__always)
+    func readInt(_ path: KeyPath) throws -> Int64? {
+        try integerTable.value(for: path)
+    }
+
+    @inline(__always)
+    func readOptionalInt(_ path: KeyPath) throws -> Int64?? {
+        try integerTable.optionalValue(for: path)
+    }
+
+    @inline(__always)
+    func readDouble(_ path: KeyPath) throws -> Double? {
+        try doubleTable.value(for: path)
+    }
+
+    @inline(__always)
+    func readOptionalDouble(_ path: KeyPath) throws -> Double?? {
+        try doubleTable.optionalValue(for: path)
+    }
+
+    @inline(__always)
+    func readString(_ path: KeyPath) throws -> String? {
+        try stringTable.value(for: path)
+    }
+
+    @inline(__always)
+    func readOptionalString(_ path: KeyPath) throws -> String?? {
+        try stringTable.optionalValue(for: path)
+    }
+
+    @inline(__always)
+    func readData(_ path: KeyPath) throws -> Data? {
+        try binaryTable.value(for: path)
+    }
+
+    @inline(__always)
+    func readOptionalData(_ path: KeyPath) throws -> Data?? {
+        try binaryTable.optionalValue(for: path)
+    }
+
+    @inline(__always)
+    func read<T>(codableOptional: T.Type, _ path: KeyPath) throws -> T? where T: CodableOptional {
+        guard let data = try readOptionalData(path) else {
+            return nil
+        }
+        if let data {
+            return try T.decodeWrapped(from: data, with: decoder)
+        } else {
+            return T.nilValue
+        }
+    }
+
+    @inline(__always)
+    func read<Value>(codable: Value.Type, _ path: KeyPath) throws -> Value? where Value: Codable {
+        guard let data = try readData(path) else {
+            return nil
+        }
+        return try decoder.decode(Value.self, from: data)
     }
 }
 
@@ -174,7 +273,7 @@ extension SQLiteDatabase: Database {
      */
     public func get<Value>(_ path: KeyPath) -> Value? where Value: Codable {
         do {
-            return try getThrowing(path)
+            return try readThrowing(path)
         } catch {
             print("Failed to get \(path): \(error)")
             return nil
@@ -188,7 +287,7 @@ extension SQLiteDatabase: Database {
      */
     public func set<Value>(_ value: Value, for path: KeyPath) where Value: Codable {
         do {
-            return try setThrowing(value, for: path)
+            return try storeThrowing(value, for: path)
         } catch {
             print("Failed to set \(path) to \(value): \(error)")
         }
