@@ -3,7 +3,7 @@ import StateModel
 import SQLiteDB
 
 typealias TestDatabase = SQLiteDatabase<JSONEncoder, JSONDecoder>
-typealias TestBaseModel = Model<TestDatabase>
+typealias TestBaseModel = Model<Int, Int, Int>
 
 extension SQLiteDatabase {
 

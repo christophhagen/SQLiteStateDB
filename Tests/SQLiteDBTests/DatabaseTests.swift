@@ -26,7 +26,7 @@ struct DatabaseTests {
         func testGetSet<T: Codable & Equatable>(_ value: T, of type: T.Type = T.self) {
             let path = TestDatabase.KeyPath(model: 1, instance: 1, property: property)
             database.set(value, for: path)
-            guard let retrievedValue = database.get(path, of: T.self) else {
+            guard let retrievedValue: T = database.get(path) else {
                 Issue.record("Could not find value in database for '\(value)' (\(T.self))")
                 return
             }

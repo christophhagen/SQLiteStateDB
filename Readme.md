@@ -109,7 +109,7 @@ typealias MyDatabase = SQLiteDatabase<MyEncoder, MyDecoder>
 Now you can continue to define your model types:
 
 ```swift
-typealias MyModel = Model<MyDatabase>
+typealias MyModel = Model<Int, Int, Int>
 ```
 
 With these definitions you are ready to [define your models](https://github.com/christophhagen/StateModel#model-definition):
@@ -123,3 +123,12 @@ final class User: MyModel {
     var name: String
 }
 ```
+
+### Caching
+
+There is an additional class `CachedSQLiteDatabase`, which can cache property values so that the database doesn't need to be queried as often.
+It hase a generic cache type, which must conform to `SQLiteCache`.
+
+You can either implement your own cache, or use one of:
+- `AnyCache`: Very simple in memory cache with a maximum capacity and LRU eviction when full
+- `BasicCache`: Simple caches for different SQLite types with individual sizes and LRU eviction

@@ -6,7 +6,7 @@ private extension TestDatabase {
     func testGetSet<T: Codable & Equatable>(_ value: T, of type: T.Type = T.self, property: Int = 1) {
         let path = TestDatabase.KeyPath(model: 1, instance: 1, property: property)
         set(value, for: path)
-        guard let retrievedValue = get(path, of: T.self) else {
+        guard let retrievedValue: T = get(path) else {
             Issue.record("Could not find value in database for '\(value)' (\(T.self))")
             return
         }
@@ -86,9 +86,8 @@ struct PrimitivesTests {
         // so we adapt the test
         let value: Int??? = .some(.some(nil))
 
-        let path = TestDatabase.KeyPath(model: 1, instance: 1, property: 4)
-        database.set(value, for: path)
-        guard let retrievedValue = database.get(path, of: Int???.self) else {
+        database.set(value, model: 1, instance: 1, property: 4, )
+        guard let retrievedValue = database.get(model: 1, instance: 1, property: 4, of: Int???.self) else {
             Issue.record("Could not find value for triple optional")
             return
         }

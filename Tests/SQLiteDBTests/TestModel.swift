@@ -22,7 +22,7 @@ final class TestModel: TestBaseModel {
     var ref: NestedModel?
 
     @ReferenceList(id: PropertyId.list)
-    var list: List<NestedModel>
+    var list: [NestedModel]
 
     enum PropertyId: Int {
         case a = 1

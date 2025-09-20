@@ -15,7 +15,7 @@ extension RawRepresentable where RawValue: IntegerConvertible {
     }
 }
 
-public final class CachedSQLiteDatabase<Cache: SQLiteCache, Encoder: GenericEncoder, Decoder: GenericDecoder> where Cache.Key == SQLiteDatabase.KeyPath {
+public final class CachedSQLiteDatabase<Cache: SQLiteCache, Encoder: GenericEncoder, Decoder: GenericDecoder>: Database<Int, Int, Int> where Cache.Key == SQLiteDatabase.KeyPath {
 
     public typealias KeyPath = Path<Int, Int, Int>
 
@@ -266,11 +266,11 @@ public final class CachedSQLiteDatabase<Cache: SQLiteCache, Encoder: GenericEnco
         cache.setAny(value as Any, for: path)
         return value
     }
-}
 
-extension CachedSQLiteDatabase: Database {
+    // MARK: Database protocol
 
-    public func get<Value>(_ path: KeyPath) -> Value? where Value : Decodable, Value : Encodable {
+    public override func get<Value>(model: Int, instance: Int, property: Int) -> Value? where Value : DatabaseValue {
+        let path = Path(model: model, instance: instance, property: property)
         do {
             return try readThrowing(path)
         } catch {
@@ -279,7 +279,8 @@ extension CachedSQLiteDatabase: Database {
         }
     }
 
-    public func set<Value>(_ value: Value, for path: KeyPath) where Value : Decodable, Value : Encodable {
+    public override func set<Value>(_ value: Value, model: Int, instance: Int, property: Int) where Value : DatabaseValue {
+        let path = Path(model: model, instance: instance, property: property)
         do {
             return try storeThrowing(value, for: path)
         } catch {
@@ -287,8 +288,8 @@ extension CachedSQLiteDatabase: Database {
         }
     }
 
-    public func select<T>(modelId: Int, propertyId: Int, where predicate: (Int, StateModel.InstanceStatus) -> T?) -> [T] {
-        db.select(modelId: modelId, propertyId: propertyId, where: predicate)
+    public override func all<T>(model: Int, where predicate: (_ instanceId: Int, _ status: InstanceStatus) -> T?) -> [T] {
+        db.all(model: model, where: predicate)
     }
 
 }

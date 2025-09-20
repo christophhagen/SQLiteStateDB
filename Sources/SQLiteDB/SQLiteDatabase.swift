@@ -16,7 +16,7 @@ extension Optional {
  An additional table tracks the model instance status properties to provide the model selection functionality.
  All values are stored with a timestamp to provide a history.
  */
-public final class SQLiteDatabase<Encoder: GenericEncoder, Decoder: GenericDecoder> {
+public final class SQLiteDatabase<Encoder: GenericEncoder, Decoder: GenericDecoder>: Database<Int, Int, Int> {
 
     public typealias KeyPath = Path<Int, Int, Int>
 
@@ -68,6 +68,7 @@ public final class SQLiteDatabase<Encoder: GenericEncoder, Decoder: GenericDecod
         self.stringTable = try .init(name: "s", database: database)
         self.binaryTable = try .init(name: "b", database: database)
         self.instanceTable = try .init(name: "o", database: database)
+        super.init()
     }
 
 
@@ -260,18 +261,16 @@ public final class SQLiteDatabase<Encoder: GenericEncoder, Decoder: GenericDecod
         }
         return try decoder.decode(Value.self, from: data)
     }
-}
 
 // MARK: Database protocol
-
-extension SQLiteDatabase: Database {
 
     /**
      Get the value for a specific property.
      - Parameter path: The unique identifier of the property
      - Returns: The value of the property, if one exists
      */
-    public func get<Value>(_ path: KeyPath) -> Value? where Value: Codable {
+    public override func get<Value>(model: Int, instance: Int, property: Int) -> Value? where Value : DatabaseValue {
+        let path = Path(model: model, instance: instance, property: property)
         do {
             return try readThrowing(path)
         } catch {
@@ -285,7 +284,8 @@ extension SQLiteDatabase: Database {
      - Parameter value: The new value to set for the property
      - Parameter path: The unique identifier of the property
      */
-    public func set<Value>(_ value: Value, for path: KeyPath) where Value: Codable {
+    public override func set<Value>(_ value: Value, model: Int, instance: Int, property: Int) where Value : DatabaseValue {
+        let path = Path(model: model, instance: instance, property: property)
         do {
             return try storeThrowing(value, for: path)
         } catch {
@@ -305,13 +305,9 @@ extension SQLiteDatabase: Database {
      - Parameter status: The instance status of the path.
      - Returns: The list of all search results that were returned by the `predicate`
      */
-    public func select<T>(
-        modelId: ModelKey,
-        propertyId: PropertyKey,
-        where predicate: (_ instanceId: InstanceKey, _ status: InstanceStatus) -> T?
-    ) -> [T] {
+    public override func all<T>(model: Int, where predicate: (_ instanceId: Int, _ status: InstanceStatus) -> T?) -> [T] {
         do {
-            return try instanceTable.all(model: modelId, where: predicate)
+            return try instanceTable.all(model: model, where: predicate)
         } catch {
             print("Failed to select \(String(describing: T.self)): \(error)")
             return []
