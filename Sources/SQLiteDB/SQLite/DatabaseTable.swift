@@ -1,4 +1,3 @@
-import Foundation
 import SQLite
 
 /**
@@ -21,9 +20,6 @@ struct DatabaseTable<T> where T: Value {
     /// The column for the property id of the path
     private let propertyId = Expression<Int>("p")
 
-    /// The column for the timestamp of the value
-    private let timestamp = Expression<Double>("t")
-
     /// The column for the value itself
     private let value = Expression<T?>("v")
 
@@ -43,21 +39,20 @@ struct DatabaseTable<T> where T: Value {
             p INTEGER NOT NULL,
             t DOUBLE NOT NULL,
             v <T>,
-            PRIMARY KEY (m, i, p, t)
+            PRIMARY KEY (m, i, p)
         ) WITHOUT ROWID;
         */
         let createQuery = table.create(ifNotExists: true, withoutRowid: true) {
             $0.column(modelId)
             $0.column(instanceId)
             $0.column(propertyId)
-            $0.column(timestamp)
             $0.column(value)
-            $0.primaryKey(modelId, instanceId, propertyId, timestamp)
+            $0.primaryKey(modelId, instanceId, propertyId)
         }
 
         try database.run(createQuery)
 
-        let indexQuery = table.createIndex(modelId, instanceId, propertyId, timestamp.desc, ifNotExists: true)
+        let indexQuery = table.createIndex(modelId, instanceId, propertyId, ifNotExists: true)
         try database.run(indexQuery)
     }
 
@@ -69,7 +64,6 @@ struct DatabaseTable<T> where T: Value {
     func value(for path: SQLiteDatabase.KeyPath) throws -> T? {
         let query = table
             .filter(modelId == path.model && instanceId == path.instance && propertyId == path.property)
-            .order(timestamp.desc)
             .limit(1)
         guard let row = try database.pluck(query) else {
             return nil
@@ -87,7 +81,6 @@ struct DatabaseTable<T> where T: Value {
     func optionalValue(for path: SQLiteDatabase.KeyPath) throws -> T?? {
         let query = table
             .filter(modelId == path.model && instanceId == path.instance && propertyId == path.property)
-            .order(timestamp.desc)
             .limit(1)
         guard let row = try database.pluck(query) else {
             return .none
@@ -95,12 +88,12 @@ struct DatabaseTable<T> where T: Value {
         return .some(row[value])
     }
 
-    func insert(value: T?, for path: SQLiteDatabase.KeyPath, timestamp: Date = Date()) throws {
+    func insert(value: T?, for path: SQLiteDatabase.KeyPath) throws {
         let query = table.insert(
+            or: .replace,
             modelId <- path.model,
             instanceId <- path.instance,
             propertyId <- path.property,
-            self.timestamp <- timestamp.timeIntervalSince1970,
             self.value <- value
         )
 

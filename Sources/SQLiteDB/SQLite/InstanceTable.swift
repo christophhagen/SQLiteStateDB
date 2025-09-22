@@ -1,4 +1,3 @@
-import Foundation
 import SQLite
 import StateModel
 
@@ -11,8 +10,6 @@ struct InstanceTable {
     private let modelId = Expression<Int>("m")
 
     private let instanceId = Expression<Int>("i")
-
-    private let timestamp = Expression<Double>("t")
 
     private let value = Expression<Int>("v")
 
@@ -32,14 +29,13 @@ struct InstanceTable {
         let createQuery = table.create(ifNotExists: true, withoutRowid: true) {
             $0.column(modelId)
             $0.column(instanceId)
-            $0.column(timestamp)
             $0.column(value)
             $0.primaryKey(modelId, instanceId)
         }
 
         try database.run(createQuery)
 
-        let indexQuery = table.createIndex(modelId, instanceId, timestamp.desc, ifNotExists: true)
+        let indexQuery = table.createIndex(modelId, instanceId, ifNotExists: true)
         try database.run(indexQuery)
     }
 
@@ -55,11 +51,10 @@ struct InstanceTable {
         }
     }
 
-    func update(value: InstanceStatus, model: Int, instance: Int, timestamp: Date = Date()) throws {
+    func update(value: InstanceStatus, model: Int, instance: Int) throws {
         let query = table.insert(or: .replace,
             modelId <- model,
             instanceId <- instance,
-            self.timestamp <- timestamp.timeIntervalSince1970,
             self.value <- Int(value.rawValue)
         )
         try database.run(query)
@@ -73,7 +68,6 @@ struct InstanceTable {
     func value(for model: Int, instance: Int) throws -> InstanceStatus? {
         let query = table
             .filter(modelId == model && instanceId == instance)
-            .order(timestamp.desc)
             .limit(1)
         guard let row = try database.pluck(query) else {
             return nil
