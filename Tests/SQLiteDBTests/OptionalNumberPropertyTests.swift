@@ -49,7 +49,7 @@ private final class NumberModel: TestBaseModel {
     var cgFloat: CGFloat?
 }
 
-@Suite("Number properties")
+@Suite("Optional properties")
 struct OptionalNumberPropertyTests {
 
     @Test("Int")
