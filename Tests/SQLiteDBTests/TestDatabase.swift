@@ -22,3 +22,24 @@ extension TestDatabase {
         try self.init(encoder: JSONEncoder(), decoder: JSONDecoder())
     }
 }
+
+
+typealias TestHistoryDatabase = SQLiteHistoryDatabase<JSONEncoder, JSONDecoder>
+
+extension SQLiteHistoryDatabase {
+
+    convenience init(encoder: Encoder, decoder: Decoder) throws {
+        let tempDir = FileManager.default.temporaryDirectory
+        let dbFolder = tempDir.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: dbFolder, withIntermediateDirectories: true)
+        let file = dbFolder.appendingPathComponent("db.sqlite3")
+        try self.init(file: file, encoder: encoder, decoder: decoder)
+    }
+}
+
+extension TestHistoryDatabase {
+
+    convenience init() throws {
+        try self.init(encoder: JSONEncoder(), decoder: JSONDecoder())
+    }
+}
