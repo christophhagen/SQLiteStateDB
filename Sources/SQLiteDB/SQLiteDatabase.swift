@@ -255,7 +255,7 @@ public final class SQLiteDatabase<Encoder: GenericEncoder, Decoder: GenericDecod
         return try decoder.decode(Value.self, from: data)
     }
 
-// MARK: Database protocol
+    // MARK: Database protocol
 
     /**
      Get the value for a specific property.
@@ -305,5 +305,32 @@ public final class SQLiteDatabase<Encoder: GenericEncoder, Decoder: GenericDecod
             print("Failed to select \(String(describing: T.self)): \(error)")
             return []
         }
+    }
+
+    // MARK: Counting
+
+    /// The number of entries in the table for integer values
+    public var numberOfIntegerValues: Int {
+        integerTable.count
+    }
+
+    /// The number of entries in the table for double values
+    public var numberOfDoubleValues: Int {
+        doubleTable.count
+    }
+
+    /// The number of entries in the table for string values
+    public var numberOfStringValues: Int {
+        stringTable.count
+    }
+
+    /// The number of entries in the table for data values
+    public var numberOfBinaryValues: Int {
+        binaryTable.count
+    }
+
+    /// The number of entries in the table for instance values
+    public var numberOfInstances: Int {
+        instanceTable.count
     }
 }

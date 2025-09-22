@@ -99,4 +99,8 @@ struct DatabaseTable<T> where T: Value {
 
         try database.run(query)
     }
+
+    var count: Int {
+        (try? database.scalar(table.count)) ?? 0
+    }
 }

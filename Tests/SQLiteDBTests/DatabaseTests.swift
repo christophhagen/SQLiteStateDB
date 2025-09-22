@@ -35,18 +35,29 @@ struct DatabaseTests {
         }
 
         testGetSet(1)
+        #expect(database.numberOfIntegerValues == 1)
 
         testGetSet(.none, of: Int?.self)
+        #expect(database.numberOfIntegerValues == 2)
         testGetSet(1, of: Int?.self)
+        #expect(database.numberOfIntegerValues == 3)
 
         testGetSet(.none, of: Int??.self)
+        #expect(database.numberOfIntegerValues == 3)
+        #expect(database.numberOfBinaryValues == 1)
         testGetSet(.some(.none), of: Int??.self)
+        #expect(database.numberOfBinaryValues == 2)
         testGetSet(1, of: Int??.self)
+        #expect(database.numberOfBinaryValues == 3)
 
         testGetSet(.none, of: Int???.self)
+        #expect(database.numberOfBinaryValues == 4)
         testGetSet(.some(.none), of: Int???.self)
+        #expect(database.numberOfBinaryValues == 5)
         testGetSet(.some(.some(.none)), of: Int???.self)
+        #expect(database.numberOfBinaryValues == 6)
         testGetSet(1, of: Int???.self)
+        #expect(database.numberOfBinaryValues == 7)
     }
 
     @Test("Top-level nested optional encoding")

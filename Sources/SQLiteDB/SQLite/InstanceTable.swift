@@ -75,4 +75,8 @@ struct InstanceTable {
         let raw = UInt8(row[value])
         return .init(rawValue: raw)
     }
+
+    var count: Int {
+        (try? database.scalar(table.count)) ?? 0
+    }
 }
