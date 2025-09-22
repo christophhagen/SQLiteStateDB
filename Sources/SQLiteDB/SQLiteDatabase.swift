@@ -2,13 +2,6 @@ import Foundation
 import SQLite
 import StateModel
 
-extension Optional {
-
-    func asResult<T>() -> T {
-        self as! T
-    }
-}
-
 /**
  A SQLite Database suitable to act as a database for StateModel.
 
