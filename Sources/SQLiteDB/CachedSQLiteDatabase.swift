@@ -1,20 +1,6 @@
 import Foundation
 import StateModel
 
-extension RawRepresentable where RawValue: IntegerConvertible {
-
-    init?(intValue: Int64) {
-        guard let raw = RawValue.init(intValue: intValue) else {
-            return nil
-        }
-        self.init(rawValue: raw)
-    }
-
-    var intValue: Int64 {
-        rawValue.intValue
-    }
-}
-
 public final class CachedSQLiteDatabase<Cache: SQLiteCache, Encoder: GenericEncoder, Decoder: GenericDecoder>: Database<Int, Int, Int> where Cache.Key == SQLiteDatabase.KeyPath {
 
     public typealias KeyPath = Path<Int, Int, Int>
