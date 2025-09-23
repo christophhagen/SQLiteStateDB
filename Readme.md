@@ -1,6 +1,6 @@
 # SQLite State Database
 
-This repository provides an implementation for a [StateModel](https://github.com/christophhagen/StateModel) database based on SQLite, with integer [key paths](https://github.com/christophhagen/StateModel#database-definition).
+This repository provides an implementation for a [StateModel](https://github.com/christophhagen/StateModel) database based on SQLite, with [key paths](https://github.com/christophhagen/StateModel#database-definition) that can be represented as SQLite values.
 It can be used as a simple storage solution for mobile devices.
 
 Integrate this package like you would any other:
