@@ -1,9 +1,12 @@
 import SQLite
+import StateModel
 
 /**
  A generic table to store values of a SQLite type.
  */
-struct DatabaseTable<T> where T: Value {
+struct DatabaseTable<M: Value & ModelKeyType, I: Value & InstanceKeyType, P: Value & PropertyKeyType, T> where T: Value, M.Datatype: Equatable, I.Datatype: Equatable, P.Datatype: Equatable {
+
+    typealias KeyPath = Path<M, I, P>
 
     /// The database connection to retrieve and insert values
     private let database: Connection
@@ -12,13 +15,13 @@ struct DatabaseTable<T> where T: Value {
     private let table: Table
 
     /// The column for the model id of the path
-    private let modelId = Expression<Int>("m")
+    private let modelId = Expression<M>("m")
 
     /// The column for the instance id of the path
-    private let instanceId = Expression<Int>("i")
+    private let instanceId = Expression<I>("i")
 
     /// The column for the property id of the path
-    private let propertyId = Expression<Int>("p")
+    private let propertyId = Expression<P>("p")
 
     /// The column for the value itself
     private let value = Expression<T?>("v")
@@ -61,10 +64,9 @@ struct DatabaseTable<T> where T: Value {
      - Parameter path: The path to search for in the table.
      - Returns: The value for the row with the given path, or `nil`, if the value column is `NULL` or if no row exists for the given path.
      */
-    func value(for path: SQLiteDatabase.KeyPath) throws -> T? {
+    func value(for path: KeyPath) throws -> T? {
         let query = table
             .filter(modelId == path.model && instanceId == path.instance && propertyId == path.property)
-            .limit(1)
         guard let row = try database.pluck(query) else {
             return nil
         }
@@ -78,7 +80,7 @@ struct DatabaseTable<T> where T: Value {
      - Parameter path: The path to search for in the table.
      - Returns: The value for the row with the given path,`nil`, if no row exists for the given path, or `.some(nil)`, if the value column is `NULL`.
      */
-    func optionalValue(for path: SQLiteDatabase.KeyPath) throws -> T?? {
+    func optionalValue(for path: KeyPath) throws -> T?? {
         let query = table
             .filter(modelId == path.model && instanceId == path.instance && propertyId == path.property)
             .limit(1)
@@ -88,7 +90,7 @@ struct DatabaseTable<T> where T: Value {
         return .some(row[value])
     }
 
-    func insert(value: T?, for path: SQLiteDatabase.KeyPath) throws {
+    func insert(value: T?, for path: KeyPath) throws {
         let query = table.insert(
             or: .replace,
             modelId <- path.model,

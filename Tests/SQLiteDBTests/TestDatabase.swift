@@ -2,12 +2,12 @@ import Foundation
 import StateModel
 import SQLiteDB
 
-typealias TestDatabase = SQLiteDatabase<JSONEncoder, JSONDecoder>
+typealias TestDatabase = SQLiteDatabase<Int, Int, Int>
 typealias TestBaseModel = Model<Int, Int, Int>
 
 extension SQLiteDatabase {
 
-    convenience init(encoder: Encoder, decoder: Decoder) throws {
+    convenience init(encoder: any GenericEncoder, decoder: any GenericDecoder) throws {
         let tempDir = FileManager.default.temporaryDirectory
         let dbFolder = tempDir.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: dbFolder, withIntermediateDirectories: true)
@@ -24,11 +24,11 @@ extension TestDatabase {
 }
 
 
-typealias TestHistoryDatabase = SQLiteHistoryDatabase<JSONEncoder, JSONDecoder>
+typealias TestHistoryDatabase = SQLiteHistoryDatabase<Int, Int, Int>
 
 extension SQLiteHistoryDatabase {
 
-    convenience init(encoder: Encoder, decoder: Decoder) throws {
+    convenience init(encoder: any GenericEncoder, decoder: any GenericDecoder) throws {
         let tempDir = FileManager.default.temporaryDirectory
         let dbFolder = tempDir.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: dbFolder, withIntermediateDirectories: true)

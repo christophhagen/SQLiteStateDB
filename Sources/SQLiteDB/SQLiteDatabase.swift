@@ -2,6 +2,8 @@ import Foundation
 import SQLite
 import StateModel
 
+public typealias SQLiteKey = Value & Equatable
+
 /**
  A SQLite Database suitable to act as a database for StateModel.
 
@@ -9,9 +11,9 @@ import StateModel
  An additional table tracks the model instance status properties to provide the model selection functionality.
  All values are stored with a timestamp to provide a history.
  */
-public final class SQLiteDatabase<Encoder: GenericEncoder, Decoder: GenericDecoder>: Database<Int, Int, Int> {
+public final class SQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKey & InstanceKeyType, P: SQLiteKey & PropertyKeyType>: Database<M, I, P> where M.Datatype: Equatable, I.Datatype: Equatable, P.Datatype: Equatable {
 
-    public typealias KeyPath = Path<Int, Int, Int>
+    public typealias KeyPath = Path<M, I, P>
 
     public typealias Record = StateModel.Record<ModelKey, InstanceKey, PropertyKey>
 
@@ -19,25 +21,25 @@ public final class SQLiteDatabase<Encoder: GenericEncoder, Decoder: GenericDecod
     private let connection: Connection
 
     /// The table to store all values that can be converted to integers
-    private let integerTable: DatabaseTable<Int64>
+    private let integerTable: DatabaseTable<M, I, P, Int64>
 
     /// The table to store all values that can be converted to double values
-    private let doubleTable: DatabaseTable<Double>
+    private let doubleTable: DatabaseTable<M, I, P, Double>
 
     /// The table to store strings and optional strings
-    private let stringTable: DatabaseTable<String>
+    private let stringTable: DatabaseTable<M, I, P, String>
 
     /// The table to store binary values and any encodable types that don't match the other tables
-    private let binaryTable: DatabaseTable<Data>
+    private let binaryTable: DatabaseTable<M, I, P, Data>
 
     /// The table to store the current status for all instances for quicker retrieval on select queries
-    private let instanceTable: InstanceTable
+    private let instanceTable: InstanceTable<M, I>
 
     /// The encoder to use for `Codable` types that do not match as integers, doubles or strings
-    private let encoder: Encoder
+    private let encoder: any GenericEncoder
 
     ///The decoder to use for `Codable` types that do not match as integers, doubles or strings
-    private let decoder: Decoder
+    private let decoder: any GenericDecoder
 
     /**
      Create or open a SQLite database.
@@ -49,7 +51,7 @@ public final class SQLiteDatabase<Encoder: GenericEncoder, Decoder: GenericDecod
      - Parameter decoder: The decoder to use for `Codable` types.
      - Throws: `SQLite.Result` errors if the database could not be opened, or tables and indices could not be created.
      */
-    public init(file: URL, encoder: Encoder, decoder: Decoder) throws {
+    public init(file: URL, encoder: any GenericEncoder, decoder: any GenericDecoder) throws {
         self.encoder = encoder
         self.decoder = decoder
 
@@ -190,7 +192,7 @@ public final class SQLiteDatabase<Encoder: GenericEncoder, Decoder: GenericDecod
     @inline(__always)
     func readStatus(_ path: KeyPath) throws -> InstanceStatus? {
         if path.property == PropertyKey.instanceId {
-            return try instanceTable.value(for: path.model, instance: path.instance)
+            return try instanceTable.value(model: path.model, instance: path.instance)
         }
         return try readInt(path)?.converted(to: InstanceStatus.self)
     }
@@ -262,8 +264,7 @@ public final class SQLiteDatabase<Encoder: GenericEncoder, Decoder: GenericDecod
      - Parameter path: The unique identifier of the property
      - Returns: The value of the property, if one exists
      */
-    public override func get<Value>(model: Int, instance: Int, property: Int) -> Value? where Value : DatabaseValue {
-        let path = Path(model: model, instance: instance, property: property)
+    public override func get<Value>(_ path: KeyPath) -> Value? where Value : DatabaseValue {
         do {
             return try readThrowing(path)
         } catch {
@@ -277,8 +278,7 @@ public final class SQLiteDatabase<Encoder: GenericEncoder, Decoder: GenericDecod
      - Parameter value: The new value to set for the property
      - Parameter path: The unique identifier of the property
      */
-    public override func set<Value>(_ value: Value, model: Int, instance: Int, property: Int) where Value : DatabaseValue {
-        let path = Path(model: model, instance: instance, property: property)
+    public override func set<Value>(_ value: Value, for path: KeyPath) where Value : DatabaseValue {
         do {
             return try storeThrowing(value, for: path)
         } catch {
@@ -298,7 +298,7 @@ public final class SQLiteDatabase<Encoder: GenericEncoder, Decoder: GenericDecod
      - Parameter status: The instance status of the path.
      - Returns: The list of all search results that were returned by the `predicate`
      */
-    public override func all<T>(model: Int, where predicate: (_ instanceId: Int, _ status: InstanceStatus) -> T?) -> [T] {
+    public override func all<T>(model: M, where predicate: (_ instanceId: I, _ status: InstanceStatus) -> T?) -> [T] {
         do {
             return try instanceTable.all(model: model, where: predicate)
         } catch {

@@ -1,11 +1,12 @@
 import Foundation
 import StateModel
+import SQLite
 
-public final class CachedSQLiteDatabase<Cache: SQLiteCache, Encoder: GenericEncoder, Decoder: GenericDecoder>: Database<Int, Int, Int> where Cache.Key == SQLiteDatabase.KeyPath {
+public final class CachedSQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKey & InstanceKeyType, P: SQLiteKey & PropertyKeyType, Cache: SQLiteCache>: Database<M, I, P> where Cache.Key == Path<M, I, P>, M.Datatype: Equatable, I.Datatype: Equatable, P.Datatype: Equatable  {
 
-    public typealias KeyPath = Path<Int, Int, Int>
+    public typealias KeyPath = Path<M, I, P>
 
-    let db: SQLiteDatabase<Encoder, Decoder>
+    let db: SQLiteDatabase<M, I, P>
 
     let cache: Cache
 
@@ -19,7 +20,7 @@ public final class CachedSQLiteDatabase<Cache: SQLiteCache, Encoder: GenericEnco
      - Parameter decoder: The decoder to use for `Codable` types.
      - Throws: `SQLite.Result` errors if the database could not be opened, or tables and indices could not be created.
      */
-    public init(file: URL, encoder: Encoder, decoder: Decoder, cache: Cache) throws {
+    public init(file: URL, encoder: any GenericEncoder, decoder: any GenericDecoder, cache: Cache) throws {
         self.db = try .init(file: file, encoder: encoder, decoder: decoder)
         self.cache = cache
     }
@@ -255,8 +256,7 @@ public final class CachedSQLiteDatabase<Cache: SQLiteCache, Encoder: GenericEnco
 
     // MARK: Database protocol
 
-    public override func get<Value>(model: Int, instance: Int, property: Int) -> Value? where Value : DatabaseValue {
-        let path = Path(model: model, instance: instance, property: property)
+    public override func get<Value>(_ path: KeyPath) -> Value? where Value : DatabaseValue {
         do {
             return try readThrowing(path)
         } catch {
@@ -265,8 +265,7 @@ public final class CachedSQLiteDatabase<Cache: SQLiteCache, Encoder: GenericEnco
         }
     }
 
-    public override func set<Value>(_ value: Value, model: Int, instance: Int, property: Int) where Value : DatabaseValue {
-        let path = Path(model: model, instance: instance, property: property)
+    public override func set<Value>(_ value: Value, for path: KeyPath) where Value : DatabaseValue {
         do {
             return try storeThrowing(value, for: path)
         } catch {
@@ -274,7 +273,7 @@ public final class CachedSQLiteDatabase<Cache: SQLiteCache, Encoder: GenericEnco
         }
     }
 
-    public override func all<T>(model: Int, where predicate: (_ instanceId: Int, _ status: InstanceStatus) -> T?) -> [T] {
+    public override func all<T>(model: M, where predicate: (_ instanceId: I, _ status: InstanceStatus) -> T?) -> [T] {
         db.all(model: model, where: predicate)
     }
 

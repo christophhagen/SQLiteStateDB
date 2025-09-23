@@ -11,9 +11,9 @@ typealias Timestamped<T> = (value: T, date: Date)
  An additional table tracks the model instance status properties to provide the model selection functionality.
  All values are stored with a timestamp to provide a history.
  */
-public final class SQLiteHistoryDatabase<Encoder: GenericEncoder, Decoder: GenericDecoder>: HistoryDatabase<Int, Int, Int> {
+public final class SQLiteHistoryDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKey & InstanceKeyType, P: SQLiteKey & PropertyKeyType>: HistoryDatabase<M, I, P> where M.Datatype: Equatable, I.Datatype: Equatable, P.Datatype: Equatable {
 
-    public typealias KeyPath = Path<Int, Int, Int>
+    public typealias KeyPath = Path<M, I, P>
 
     public typealias Record = StateModel.Record<ModelKey, InstanceKey, PropertyKey>
 
@@ -21,25 +21,25 @@ public final class SQLiteHistoryDatabase<Encoder: GenericEncoder, Decoder: Gener
     private let connection: Connection
 
     /// The table to store all values that can be converted to integers
-    private let integerTable: TimestampedDatabaseTable<Int64>
+    private let integerTable: TimestampedDatabaseTable<M, I, P, Int64>
 
     /// The table to store all values that can be converted to double values
-    private let doubleTable: TimestampedDatabaseTable<Double>
+    private let doubleTable: TimestampedDatabaseTable<M, I, P, Double>
 
     /// The table to store strings and optional strings
-    private let stringTable: TimestampedDatabaseTable<String>
+    private let stringTable: TimestampedDatabaseTable<M, I, P, String>
 
     /// The table to store binary values and any encodable types that don't match the other tables
-    private let binaryTable: TimestampedDatabaseTable<Data>
+    private let binaryTable: TimestampedDatabaseTable<M, I, P, Data>
 
     /// The table to store the current status for all instances for quicker retrieval on select queries
-    private let instanceTable: TimestampedInstanceTable
+    private let instanceTable: TimestampedInstanceTable<M, I>
 
     /// The encoder to use for `Codable` types that do not match as integers, doubles or strings
-    private let encoder: Encoder
+    private let encoder: any GenericEncoder
 
     ///The decoder to use for `Codable` types that do not match as integers, doubles or strings
-    private let decoder: Decoder
+    private let decoder: any GenericDecoder
 
     /**
      Create or open a SQLite database.
@@ -51,7 +51,7 @@ public final class SQLiteHistoryDatabase<Encoder: GenericEncoder, Decoder: Gener
      - Parameter decoder: The decoder to use for `Codable` types.
      - Throws: `SQLite.Result` errors if the database could not be opened, or tables and indices could not be created.
      */
-    public init(file: URL, encoder: Encoder, decoder: Decoder) throws {
+    public init(file: URL, encoder: any GenericEncoder, decoder: any GenericDecoder) throws {
         self.encoder = encoder
         self.decoder = decoder
 
@@ -284,8 +284,7 @@ public final class SQLiteHistoryDatabase<Encoder: GenericEncoder, Decoder: Gener
      - Parameter path: The unique identifier of the property
      - Returns: The value of the property, if one exists
      */
-    public override func get<Value>(model: ModelKey, instance: InstanceKey, property: PropertyKey, at date: Date?) -> (value: Value, date: Date)? where Value: DatabaseValue {
-        let path = Path(model: model, instance: instance, property: property)
+    public override func get<Value>(_ path: KeyPath, at date: Date?) -> (value: Value, date: Date)? where Value: DatabaseValue {
         do {
             return try readThrowing(path, at: date)
         } catch {
@@ -299,8 +298,7 @@ public final class SQLiteHistoryDatabase<Encoder: GenericEncoder, Decoder: Gener
      - Parameter value: The new value to set for the property
      - Parameter path: The unique identifier of the property
      */
-    public override func set<Value>(_ value: Value, model: ModelKey, instance: InstanceKey, property: PropertyKey, at date: Date?) where Value: DatabaseValue {
-        let path = Path(model: model, instance: instance, property: property)
+    public override func set<Value>(_ value: Value, for path: KeyPath, at date: Date?) where Value: DatabaseValue {
         do {
             return try storeThrowing(value, for: path, at: date)
         } catch {

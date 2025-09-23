@@ -7,19 +7,13 @@ import BinaryCodable
 extension BinaryEncoder: GenericEncoder { }
 extension BinaryDecoder: GenericDecoder { }
 
-extension SQLiteDatabase<BinaryEncoder, BinaryDecoder> {
-
-    convenience init() throws {
-        try self.init(encoder: .init(), decoder: .init())
-    }
-}
 
 @Suite("Database tests")
 struct DatabaseTests {
 
     @Test("Test primitive read/write")
     func testPrimitiveReadWrite() throws {
-        let database = try SQLiteDatabase<BinaryEncoder, BinaryDecoder>()
+        let database = try TestDatabase(encoder: BinaryEncoder(), decoder: BinaryDecoder())
 
         var property = 1
 
@@ -60,9 +54,27 @@ struct DatabaseTests {
         #expect(database.numberOfBinaryValues == 7)
     }
 
+    @Test("Invalid JSON optional encoding")
+    func invalidJsonDecoding() async throws {
+        let database = try TestDatabase(encoder: JSONEncoder(), decoder: JSONDecoder())
+
+        let path = TestDatabase.KeyPath(model: 1, instance: 1, property: 1)
+
+        let value: Int??? = .some(.some(.none))
+        database.set(value, for: path)
+        guard let retrievedValue: Int??? = database.get(path) else {
+            Issue.record("Could not find value in database")
+            return
+        }
+        // The database encodes .some(.none), which gets decoded to .none
+        // The additional layer is captured by NULL/NOT NULL values in the database table
+        let expected: Int??? = .some(nil)
+        #expect(retrievedValue == expected)
+        #expect(retrievedValue != value)
+    }
+
     @Test("Top-level nested optional encoding")
     func testNestedOptionalEncoding() throws {
-
         let value: Int?? = .some(nil)
         let encoded = try BinaryEncoder().encode(value)
         print(encoded)

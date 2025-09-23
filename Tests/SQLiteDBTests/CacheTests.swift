@@ -4,9 +4,9 @@ import Testing
 import StateModel
 @testable import SQLiteDB
 
-typealias CacheTestDatabase<Cache: SQLiteCache> = CachedSQLiteDatabase<Cache, BinaryEncoder, BinaryDecoder> where Cache.Key == Path<Int, Int, Int>
+typealias CacheTestDatabase<Cache: SQLiteCache> = CachedSQLiteDatabase<Int, Int, Int, Cache> where Cache.Key == Path<Int, Int, Int>
 
-extension CachedSQLiteDatabase where Encoder == BinaryEncoder, Decoder == BinaryDecoder {
+extension CachedSQLiteDatabase {
 
     convenience init(cache: Cache) throws {
         let tempDir = FileManager.default.temporaryDirectory

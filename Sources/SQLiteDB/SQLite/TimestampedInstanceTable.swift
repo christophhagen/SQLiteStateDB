@@ -2,15 +2,15 @@ import Foundation
 import SQLite
 import StateModel
 
-struct TimestampedInstanceTable {
+struct TimestampedInstanceTable<M: Value, I: Value> where M.Datatype: Equatable, I.Datatype: Equatable {
 
     private let database: Connection
 
     private let table: Table
 
-    private let modelId = Expression<Int>("m")
+    private let modelId = Expression<M>("m")
 
-    private let instanceId = Expression<Int>("i")
+    private let instanceId = Expression<I>("i")
 
     private let timestamp = Expression<Double>("t")
 
@@ -43,7 +43,7 @@ struct TimestampedInstanceTable {
         try database.run(indexQuery)
     }
 
-    func all<T>(model: Int, where predicate: (_ instance: Int, _ status: InstanceStatus, _ date: Date) -> T?) throws -> [T] {
+    func all<T>(model: M, where predicate: (_ instance: I, _ status: InstanceStatus, _ date: Date) -> T?) throws -> [T] {
         let query = table
             .filter(modelId == model)
         return try database.prepare(query).compactMap { row in
@@ -55,7 +55,7 @@ struct TimestampedInstanceTable {
         }
     }
 
-    func update(value: InstanceStatus, model: Int, instance: Int, timestamp: Date = Date()) throws {
+    func update(value: InstanceStatus, model: M, instance: I, timestamp: Date = Date()) throws {
         let query = table.insert(or: .replace,
             modelId <- model,
             instanceId <- instance,
@@ -70,7 +70,7 @@ struct TimestampedInstanceTable {
      - Parameter path: The path to search for in the table.
      - Returns: The value for the row with the given path, or `nil`, if the value column is `NULL` or if no row exists for the given path.
      */
-    func value(for model: Int, instance: Int) throws -> (value: InstanceStatus, date: Date)? {
+    func value(for model: M, instance: I) throws -> (value: InstanceStatus, date: Date)? {
         let query = table
             .filter(modelId == model && instanceId == instance)
             .order(timestamp.desc)

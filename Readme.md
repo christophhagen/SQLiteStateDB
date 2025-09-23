@@ -8,7 +8,7 @@ Integrate this package like you would any other:
 ```
 ...
     dependencies: [
-        .package(url: "https://github.com/christophhagen/SQLiteStateDB", from: "1.0.0")
+        .package(url: "https://github.com/christophhagen/SQLiteStateDB", from: "2.0.0")
     ],
 ...
     .target(
@@ -26,20 +26,48 @@ Consult the [StateModel Documentation](https://github.com/christophhagen/StateMo
 
 ### Path components
 
-The current implementation of `SQLiteDatabase` only supports integer path components:
+The current implementation of `SQLiteDatabase` only supports path components that can be represented as SQLite values, including `Int` and `String`.
+You can therefore define a typealias to specify your desired types:
 ```swift
-SQLiteDatabase.KeyPath: Path<Int, Int, Int>
+typealias MyDatabase = SQLiteDatabase<Int, Int, Int>
 ```
 
-> Future versions may support any path type component that can be natively represented in a SQLite column.
+In principle `SQLiteDatabase` can be used with any type that can be represented as a SQLite value.
+For some types, you have to conform them to `SQLite.Value`:
+
+```swift
+extension UInt32: @retroactive Value {
+
+    public typealias Datatype = Int
+
+    public static let declaredDatatype = "INTEGER"
+
+    public static func fromDatatypeValue(_ datatypeValue: Int) throws -> UInt32 {
+        UInt32(datatypeValue)
+    }
+
+    public var datatypeValue: Int {
+        Int(self)
+    }
+}
+```
+
+Additionally, some custom types to be used for property keys need to state conformance with `PropertyKeyType`:
+
+```swift
+extension String: @retroactive PropertyKeyType {
+
+    public static let instanceId: String = "status"
+}
+```
 
 ### Encoder and Decoder
 
 The SQLite database stores natively supported types in separate tables, e.g. all integer values are stored in a table with an `INTEGER` column.
 For types that can't be natively represented, each value is encoded to binary data before insertion.
-For these operations you need to supply an encoder and decoder, as evident by the class singature:
+For these operations you need to supply an encoder and decoder, which are provided to the initializer:
 ```swift
-SQLiteDatabase<Encoder: GenericEncoder, Decoder: GenericDecoder>
+SQLiteDatabase.init(encoder: any GenericEncoder, decoder: any GenericDecoder)
 ```
 
 `GenericEncoder` and `GenericDecoder` are types that provide the required operations.
@@ -50,7 +78,7 @@ There are a few types that can readily be used.
 Since the `Foundation` module already provides [JSONEncoder](https://developer.apple.com/documentation/foundation/jsonencoder) and [JSONDecoder](https://developer.apple.com/documentation/foundation/jsondecoder), you can simply use those:
 
 ```swift
-SQLiteDatabase<JSONEncoder, JSONDecoder>
+let database = MyDatabase(encoder: JSONEncoder(), decoder: JSONDecoder())
 ```
 
 While encoding values as JSON is great for debugging, it is not recommended for production use, due to the inefficient encoding as a string.
@@ -103,7 +131,7 @@ extension BinaryDecoder: GenericDecoder { }
 
 You can define a typealias to substitute your chosen encoding types:
 ```swift
-typealias MyDatabase = SQLiteDatabase<MyEncoder, MyDecoder>
+typealias MyDatabase = SQLiteDatabase<Int, Int, Int>
 ```
 
 Now you can continue to define your model types:
@@ -127,7 +155,7 @@ final class User: MyModel {
 ### Caching
 
 There is an additional class `CachedSQLiteDatabase`, which can cache property values so that the database doesn't need to be queried as often.
-It hase a generic cache type, which must conform to `SQLiteCache`.
+It has a generic cache type, which must conform to `SQLiteCache`.
 
 You can either implement your own cache, or use one of:
 - `AnyCache`: Very simple in memory cache with a maximum capacity and LRU eviction when full
