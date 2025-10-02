@@ -2,11 +2,9 @@ import Foundation
 import StateModel
 import SQLite
 
-public final class CachedSQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKey & InstanceKeyType, P: SQLiteKey & PropertyKeyType, Cache: SQLiteCache>: Database<M, I, P> where Cache.Key == Path<M, I, P>, M.Datatype: Equatable, I.Datatype: Equatable, P.Datatype: Equatable  {
+public final class CachedSQLiteDatabase<Cache: SQLiteCache>: Database where Cache.Key == Path {
 
-    public typealias KeyPath = Path<M, I, P>
-
-    let db: SQLiteDatabase<M, I, P>
+    let db: SQLiteDatabase
 
     let cache: Cache
 
@@ -25,7 +23,7 @@ public final class CachedSQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKe
         self.cache = cache
     }
 
-    func storeThrowing<Value>(_ value: Value, for path: KeyPath) throws where Value : Decodable, Value : Encodable {
+    func storeThrowing<Value>(_ value: Value, for path: Path) throws where Value : Decodable, Value : Encodable {
         switch Value.self {
         case is InstanceStatus.Type:
             // Catch instance status updates first,
@@ -59,7 +57,7 @@ public final class CachedSQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKe
         }
     }
 
-    private func readThrowing<Value>(_ path: KeyPath) throws -> Value? where Value: Codable {
+    private func readThrowing<Value>(_ path: Path) throws -> Value? where Value: Codable {
         switch Value.self {
         case is InstanceStatus.Type:
             // First match instance information
@@ -92,37 +90,37 @@ public final class CachedSQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKe
 
     // MARK: Typed setters
 
-    func storeStatus(_ value: InstanceStatus, for path: KeyPath) throws {
+    func storeStatus(_ value: InstanceStatus, for path: Path) throws {
         cache.setInt(value.intValue, for: path)
         try db.storeStatus(value, for: path)
     }
 
-    func storeOptionalCodable(_ value: any CodableOptional, for path: KeyPath) throws {
+    func storeOptionalCodable(_ value: any CodableOptional, for path: Path) throws {
         cache.setAny(value, for: path)
         try db.storeOptionalCodable(value, for: path)
     }
 
-    func storeCodable<Value: Codable>(_ value: Value, for path: KeyPath) throws {
+    func storeCodable<Value: Codable>(_ value: Value, for path: Path) throws {
         cache.setAny(value, for: path)
         try db.storeCodable(value, for: path)
     }
 
-    func storeInt(_ value: Int64?, for path: KeyPath) throws {
+    func storeInt(_ value: Int64?, for path: Path) throws {
         cache.setInt(value, for: path)
         try db.storeInt(value, for: path)
     }
 
-    func storeDouble(_ value: Double?, for path: KeyPath) throws {
+    func storeDouble(_ value: Double?, for path: Path) throws {
         cache.setDouble(value, for: path)
         try db.storeDouble(value, for: path)
     }
 
-    func storeString(_ value: String?, for path: KeyPath) throws {
+    func storeString(_ value: String?, for path: Path) throws {
         cache.setString(value, for: path)
         try db.storeString(value, for: path)
     }
 
-    func storeData(_ value: Data?, for path: KeyPath) throws {
+    func storeData(_ value: Data?, for path: Path) throws {
         cache.setData(value, for: path)
         try db.storeData(value, for: path)
     }
@@ -130,7 +128,7 @@ public final class CachedSQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKe
     // MARK: Typed getters
 
     @inline(__always)
-    func readStatus(_ path: KeyPath) throws -> InstanceStatus? {
+    func readStatus(_ path: Path) throws -> InstanceStatus? {
         if let cachedValue = cache.getInt(path), let cachedValue {
             return .init(rawValue: UInt8(cachedValue))
         }
@@ -140,7 +138,7 @@ public final class CachedSQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKe
     }
 
     @inline(__always)
-    func readInt(_ path: KeyPath) throws -> Int64? {
+    func readInt(_ path: Path) throws -> Int64? {
         if let cachedValue = cache.getInt(path) {
             return cachedValue
         }
@@ -150,7 +148,7 @@ public final class CachedSQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKe
     }
 
     @inline(__always)
-    func readOptionalInt(_ path: KeyPath) throws -> Int64?? {
+    func readOptionalInt(_ path: Path) throws -> Int64?? {
         if let cachedValue = cache.getInt(path) {
             return cachedValue
         }
@@ -163,7 +161,7 @@ public final class CachedSQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKe
     }
 
     @inline(__always)
-    func readDouble(_ path: KeyPath) throws -> Double? {
+    func readDouble(_ path: Path) throws -> Double? {
         if let cachedValue = cache.getDouble(path) {
             return cachedValue
         }
@@ -173,7 +171,7 @@ public final class CachedSQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKe
     }
 
     @inline(__always)
-    func readOptionalDouble(_ path: KeyPath) throws -> Double?? {
+    func readOptionalDouble(_ path: Path) throws -> Double?? {
         if let cachedValue = cache.getDouble(path) {
             return cachedValue
         }
@@ -186,7 +184,7 @@ public final class CachedSQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKe
     }
 
     @inline(__always)
-    func readString(_ path: KeyPath) throws -> String? {
+    func readString(_ path: Path) throws -> String? {
         if let cachedValue = cache.getString(path) {
             return cachedValue
         }
@@ -196,7 +194,7 @@ public final class CachedSQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKe
     }
 
     @inline(__always)
-    func readOptionalString(_ path: KeyPath) throws -> String?? {
+    func readOptionalString(_ path: Path) throws -> String?? {
         if let cachedValue = cache.getString(path) {
             return cachedValue
         }
@@ -209,7 +207,7 @@ public final class CachedSQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKe
     }
 
     @inline(__always)
-    func readData(_ path: KeyPath) throws -> Data? {
+    func readData(_ path: Path) throws -> Data? {
         if let cachedValue = cache.getData(path) {
             return cachedValue
         }
@@ -219,7 +217,7 @@ public final class CachedSQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKe
     }
 
     @inline(__always)
-    func readOptionalData(_ path: KeyPath) throws -> Data?? {
+    func readOptionalData(_ path: Path) throws -> Data?? {
         if let cachedValue = cache.getData(path) {
             return cachedValue
         }
@@ -232,7 +230,7 @@ public final class CachedSQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKe
     }
 
     @inline(__always)
-    func read<T>(codableOptional: T.Type, _ path: KeyPath) throws -> T? where T: CodableOptional {
+    func read<T>(codableOptional: T.Type, _ path: Path) throws -> T? where T: CodableOptional {
         if let anyValue = cache.getAny(path), let value = anyValue as? T {
             return value
         }
@@ -245,7 +243,7 @@ public final class CachedSQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKe
     }
 
     @inline(__always)
-    func read<Value>(codable: Value.Type, _ path: KeyPath) throws -> Value? where Value: Codable {
+    func read<Value>(codable: Value.Type, _ path: Path) throws -> Value? where Value: Codable {
         if let anyValue: Any = cache.getAny(path), let value = anyValue as? Value {
             return value
         }
@@ -256,7 +254,7 @@ public final class CachedSQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKe
 
     // MARK: Database protocol
 
-    public override func get<Value>(_ path: KeyPath) -> Value? where Value : DatabaseValue {
+    public func get<Value>(_ path: Path) -> Value? where Value : DatabaseValue {
         do {
             return try readThrowing(path)
         } catch {
@@ -265,7 +263,7 @@ public final class CachedSQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKe
         }
     }
 
-    public override func set<Value>(_ value: Value, for path: KeyPath) where Value : DatabaseValue {
+    public func set<Value>(_ value: Value, for path: Path) where Value : DatabaseValue {
         do {
             return try storeThrowing(value, for: path)
         } catch {
@@ -273,7 +271,7 @@ public final class CachedSQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKe
         }
     }
 
-    public override func all<T>(model: M, where predicate: (_ instanceId: I, _ status: InstanceStatus) -> T?) -> [T] {
+    public func all<T>(model: ModelKey, where predicate: (_ instanceId: InstanceKey, _ status: InstanceStatus) -> T?) -> [T] {
         db.all(model: model, where: predicate)
     }
 

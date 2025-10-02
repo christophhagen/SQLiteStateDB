@@ -4,7 +4,7 @@ import Testing
 import StateModel
 @testable import SQLiteDB
 
-typealias CacheTestDatabase<Cache: SQLiteCache> = CachedSQLiteDatabase<Int, Int, Int, Cache> where Cache.Key == Path<Int, Int, Int>
+typealias CacheTestDatabase<Cache: SQLiteCache> = CachedSQLiteDatabase<Cache> where Cache.Key == Path
 
 extension CachedSQLiteDatabase {
 
@@ -22,7 +22,7 @@ struct CacheTests {
 
     @Test("Storage")
     func testStorageInCache() throws {
-        let cache = AnyCache<Path<Int, Int, Int>>(maxCount: 1000)
+        let cache = AnyCache<Path>(maxCount: 1000)
         let database = try CacheTestDatabase(cache: cache)
 
         let path = Path(model: 1, instance: 1, property: 1)
@@ -60,7 +60,7 @@ struct CacheTests {
 
     @Test("Eviction")
     func testCacheEviction() throws {
-        let cache = AnyCache<Path<Int, Int, Int>>(maxCount: 1000, evictionFraction: 0.5)
+        let cache = AnyCache<Path>(maxCount: 1000, evictionFraction: 0.5)
         let database = try CachedSQLiteDatabase(cache: cache)
 
         #expect(cache.count == 0)

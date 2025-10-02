@@ -2,8 +2,8 @@ import Foundation
 import StateModel
 import SQLiteDB
 
-typealias TestDatabase = SQLiteDatabase<Int, Int, Int>
-typealias TestBaseModel = Model<Int, Int, Int>
+typealias TestDatabase = SQLiteDatabase
+typealias TestBaseModel = ModelProtocol
 
 extension SQLiteDatabase {
 
@@ -24,7 +24,7 @@ extension TestDatabase {
 }
 
 
-typealias TestHistoryDatabase = SQLiteHistoryDatabase<Int, Int, Int>
+typealias TestHistoryDatabase = SQLiteHistoryDatabase
 
 extension SQLiteHistoryDatabase {
 

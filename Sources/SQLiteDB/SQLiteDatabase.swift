@@ -11,29 +11,25 @@ public typealias SQLiteKey = Value & Equatable
  An additional table tracks the model instance status properties to provide the model selection functionality.
  All values are stored with a timestamp to provide a history.
  */
-public final class SQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKey & InstanceKeyType, P: SQLiteKey & PropertyKeyType>: Database<M, I, P> where M.Datatype: Equatable, I.Datatype: Equatable, P.Datatype: Equatable {
-
-    public typealias KeyPath = Path<M, I, P>
-
-    public typealias Record = StateModel.Record<ModelKey, InstanceKey, PropertyKey>
+public final class SQLiteDatabase: Database {
 
     /// The connection to the database
     private let connection: Connection
 
     /// The table to store all values that can be converted to integers
-    private let integerTable: DatabaseTable<M, I, P, Int64>
+    private let integerTable: DatabaseTable<Int64>
 
     /// The table to store all values that can be converted to double values
-    private let doubleTable: DatabaseTable<M, I, P, Double>
+    private let doubleTable: DatabaseTable<Double>
 
     /// The table to store strings and optional strings
-    private let stringTable: DatabaseTable<M, I, P, String>
+    private let stringTable: DatabaseTable<String>
 
     /// The table to store binary values and any encodable types that don't match the other tables
-    private let binaryTable: DatabaseTable<M, I, P, Data>
+    private let binaryTable: DatabaseTable<Data>
 
     /// The table to store the current status for all instances for quicker retrieval on select queries
-    private let instanceTable: InstanceTable<M, I>
+    private let instanceTable: InstanceTable
 
     /// The encoder to use for `Codable` types that do not match as integers, doubles or strings
     private let encoder: any GenericEncoder
@@ -63,7 +59,6 @@ public final class SQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKey & In
         self.stringTable = try .init(name: "s", database: database)
         self.binaryTable = try .init(name: "b", database: database)
         self.instanceTable = try .init(name: "o", database: database)
-        super.init()
     }
 
 
@@ -72,7 +67,7 @@ public final class SQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKey & In
     /**
      Internal function to set properties.
      */
-    private func storeThrowing<Value>(_ value: Value, for path: KeyPath) throws where Value: Codable {
+    private func storeThrowing<Value>(_ value: Value, for path: Path) throws where Value: Codable {
         switch Value.self {
         case is InstanceStatus.Type:
             // Catch instance status updates first,
@@ -106,7 +101,7 @@ public final class SQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKey & In
         }
     }
 
-    private func readThrowing<Value>(_ path: KeyPath) throws -> Value? where Value: Codable {
+    private func readThrowing<Value>(_ path: Path) throws -> Value? where Value: Codable {
         switch Value.self {
         case is InstanceStatus.Type:
             // First match instance information
@@ -139,7 +134,7 @@ public final class SQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKey & In
 
     // MARK: Typed setters
 
-    func storeStatus(_ value: InstanceStatus, for path: KeyPath) throws {
+    func storeStatus(_ value: InstanceStatus, for path: Path) throws {
         // If the instance status really targets an instance, also save the info to an additional table
         // This is used to improve the select queries, where only the most recent values are of interest
         if path.property == PropertyKey.instanceId {
@@ -149,7 +144,7 @@ public final class SQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKey & In
         return try storeInt(value.rawValue.intValue, for: path)
     }
 
-    func storeOptionalCodable(_ value: any CodableOptional, for path: KeyPath) throws {
+    func storeOptionalCodable(_ value: any CodableOptional, for path: Path) throws {
         // For Codable types, unpack one level of Optionals which is
         // handled by SQLite NULL values
         if value.isNil {
@@ -161,36 +156,36 @@ public final class SQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKey & In
     }
 
     @inline(__always)
-    func storeCodable<Value: Codable>(_ value: Value, for path: KeyPath) throws {
+    func storeCodable<Value: Codable>(_ value: Value, for path: Path) throws {
         // Encode non-optionals
         let data: Data? = try encoder.encode(value)
         return try storeData(data, for: path)
     }
 
     @inline(__always)
-    func storeInt(_ value: Int64?, for path: KeyPath) throws {
+    func storeInt(_ value: Int64?, for path: Path) throws {
         try integerTable.insert(value: value, for: path)
     }
 
     @inline(__always)
-    func storeDouble(_ value: Double?, for path: KeyPath) throws {
+    func storeDouble(_ value: Double?, for path: Path) throws {
         try doubleTable.insert(value: value, for: path)
     }
 
     @inline(__always)
-    func storeString(_ value: String?, for path: KeyPath) throws {
+    func storeString(_ value: String?, for path: Path) throws {
         try stringTable.insert(value: value, for: path)
     }
 
     @inline(__always)
-    func storeData(_ value: Data?, for path: KeyPath) throws {
+    func storeData(_ value: Data?, for path: Path) throws {
         try binaryTable.insert(value: value, for: path)
     }
 
     // MARK: Typed getters
 
     @inline(__always)
-    func readStatus(_ path: KeyPath) throws -> InstanceStatus? {
+    func readStatus(_ path: Path) throws -> InstanceStatus? {
         if path.property == PropertyKey.instanceId {
             return try instanceTable.value(model: path.model, instance: path.instance)
         }
@@ -198,47 +193,47 @@ public final class SQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKey & In
     }
 
     @inline(__always)
-    func readInt(_ path: KeyPath) throws -> Int64? {
+    func readInt(_ path: Path) throws -> Int64? {
         try integerTable.value(for: path)
     }
 
     @inline(__always)
-    func readOptionalInt(_ path: KeyPath) throws -> Int64?? {
+    func readOptionalInt(_ path: Path) throws -> Int64?? {
         try integerTable.optionalValue(for: path)
     }
 
     @inline(__always)
-    func readDouble(_ path: KeyPath) throws -> Double? {
+    func readDouble(_ path: Path) throws -> Double? {
         try doubleTable.value(for: path)
     }
 
     @inline(__always)
-    func readOptionalDouble(_ path: KeyPath) throws -> Double?? {
+    func readOptionalDouble(_ path: Path) throws -> Double?? {
         try doubleTable.optionalValue(for: path)
     }
 
     @inline(__always)
-    func readString(_ path: KeyPath) throws -> String? {
+    func readString(_ path: Path) throws -> String? {
         try stringTable.value(for: path)
     }
 
     @inline(__always)
-    func readOptionalString(_ path: KeyPath) throws -> String?? {
+    func readOptionalString(_ path: Path) throws -> String?? {
         try stringTable.optionalValue(for: path)
     }
 
     @inline(__always)
-    func readData(_ path: KeyPath) throws -> Data? {
+    func readData(_ path: Path) throws -> Data? {
         try binaryTable.value(for: path)
     }
 
     @inline(__always)
-    func readOptionalData(_ path: KeyPath) throws -> Data?? {
+    func readOptionalData(_ path: Path) throws -> Data?? {
         try binaryTable.optionalValue(for: path)
     }
 
     @inline(__always)
-    func read<T>(codableOptional: T.Type, _ path: KeyPath) throws -> T? where T: CodableOptional {
+    func read<T>(codableOptional: T.Type, _ path: Path) throws -> T? where T: CodableOptional {
         guard let data = try readOptionalData(path) else {
             return nil
         }
@@ -250,7 +245,7 @@ public final class SQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKey & In
     }
 
     @inline(__always)
-    func read<Value>(codable: Value.Type, _ path: KeyPath) throws -> Value? where Value: Codable {
+    func read<Value>(codable: Value.Type, _ path: Path) throws -> Value? where Value: Codable {
         guard let data = try readData(path) else {
             return nil
         }
@@ -264,7 +259,7 @@ public final class SQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKey & In
      - Parameter path: The unique identifier of the property
      - Returns: The value of the property, if one exists
      */
-    public override func get<Value>(_ path: KeyPath) -> Value? where Value : DatabaseValue {
+    public func get<Value>(_ path: Path) -> Value? where Value : DatabaseValue {
         do {
             return try readThrowing(path)
         } catch {
@@ -278,7 +273,7 @@ public final class SQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKey & In
      - Parameter value: The new value to set for the property
      - Parameter path: The unique identifier of the property
      */
-    public override func set<Value>(_ value: Value, for path: KeyPath) where Value : DatabaseValue {
+    public func set<Value>(_ value: Value, for path: Path) where Value : DatabaseValue {
         do {
             return try storeThrowing(value, for: path)
         } catch {
@@ -298,7 +293,7 @@ public final class SQLiteDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKey & In
      - Parameter status: The instance status of the path.
      - Returns: The list of all search results that were returned by the `predicate`
      */
-    public override func all<T>(model: M, where predicate: (_ instanceId: I, _ status: InstanceStatus) -> T?) -> [T] {
+    public func all<T>(model: ModelKey, where predicate: (_ instanceId: InstanceKey, _ status: InstanceStatus) -> T?) -> [T] {
         do {
             return try instanceTable.all(model: model, where: predicate)
         } catch {

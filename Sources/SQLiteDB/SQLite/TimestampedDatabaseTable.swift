@@ -5,9 +5,7 @@ import StateModel
 /**
  A generic table to store values of a SQLite type.
  */
-struct TimestampedDatabaseTable<M: Value & ModelKeyType, I: Value & InstanceKeyType, P: Value & PropertyKeyType, T> where T: Value, M.Datatype: Equatable, I.Datatype: Equatable, P.Datatype: Equatable {
-
-    typealias KeyPath = Path<M, I, P>
+struct TimestampedDatabaseTable<T: Value> {
 
     /// The database connection to retrieve and insert values
     private let database: Connection
@@ -16,13 +14,13 @@ struct TimestampedDatabaseTable<M: Value & ModelKeyType, I: Value & InstanceKeyT
     private let table: Table
 
     /// The column for the model id of the path
-    private let modelId = Expression<M>("m")
+    private let modelId = Expression<Int>("m")
 
     /// The column for the instance id of the path
-    private let instanceId = Expression<I>("i")
+    private let instanceId = Expression<Int>("i")
 
     /// The column for the property id of the path
-    private let propertyId = Expression<P>("p")
+    private let propertyId = Expression<Int>("p")
 
     /// The column for the timestamp of the value
     private let timestamp = Expression<Double>("t")
@@ -64,7 +62,7 @@ struct TimestampedDatabaseTable<M: Value & ModelKeyType, I: Value & InstanceKeyT
         try database.run(indexQuery)
     }
 
-    private func select(path: KeyPath, date: Date?) -> Table {
+    private func select(path: Path, date: Date?) -> Table {
         let initial = table
             .filter(modelId == path.model && instanceId == path.instance && propertyId == path.property)
             .order(timestamp.desc)
@@ -78,7 +76,7 @@ struct TimestampedDatabaseTable<M: Value & ModelKeyType, I: Value & InstanceKeyT
      Get a value for a path.
      - Returns: The value for the row with the given path, or `nil`, if the value column is `NULL` or if no row exists for the given path.
      */
-    func value(for path: KeyPath, at date: Date?) throws -> (value: T, date: Date)? {
+    func value(for path: Path, at date: Date?) throws -> (value: T, date: Date)? {
         let query = select(path: path, date: date)
         guard let row = try database.pluck(query),
               let value = row[value] else {
@@ -93,7 +91,7 @@ struct TimestampedDatabaseTable<M: Value & ModelKeyType, I: Value & InstanceKeyT
      This function distinguishes between the presence of a `NULL` value (where it returns `.some(nil)`) and the absence of a row for the path (where it returns `nil`).
      - Returns: The value for the row with the given path,`nil`, if no row exists for the given path, or `.some(nil)`, if the value column is `NULL`.
      */
-    func optionalValue(for path: KeyPath, at date: Date?) throws -> (value: T?, date: Date)? {
+    func optionalValue(for path: Path, at date: Date?) throws -> (value: T?, date: Date)? {
         let query = select(path: path, date: date)
         guard let row = try database.pluck(query) else {
             return nil
@@ -101,7 +99,7 @@ struct TimestampedDatabaseTable<M: Value & ModelKeyType, I: Value & InstanceKeyT
         return (value: row[value], date: Date(timeIntervalSince1970: row[timestamp]))
     }
 
-    func insert(value: T?, for path: KeyPath, at date: Date = Date()) throws {
+    func insert(value: T?, for path: Path, at date: Date = Date()) throws {
         let query = table.insert(
             modelId <- path.model,
             instanceId <- path.instance,

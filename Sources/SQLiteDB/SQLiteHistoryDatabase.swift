@@ -11,29 +11,25 @@ typealias Timestamped<T> = (value: T, date: Date)
  An additional table tracks the model instance status properties to provide the model selection functionality.
  All values are stored with a timestamp to provide a history.
  */
-public final class SQLiteHistoryDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteKey & InstanceKeyType, P: SQLiteKey & PropertyKeyType>: HistoryDatabase<M, I, P> where M.Datatype: Equatable, I.Datatype: Equatable, P.Datatype: Equatable {
-
-    public typealias KeyPath = Path<M, I, P>
-
-    public typealias Record = StateModel.Record<ModelKey, InstanceKey, PropertyKey>
+public final class SQLiteHistoryDatabase: HistoryDatabase {
 
     /// The connection to the database
     private let connection: Connection
 
     /// The table to store all values that can be converted to integers
-    private let integerTable: TimestampedDatabaseTable<M, I, P, Int64>
+    private let integerTable: TimestampedDatabaseTable<Int64>
 
     /// The table to store all values that can be converted to double values
-    private let doubleTable: TimestampedDatabaseTable<M, I, P, Double>
+    private let doubleTable: TimestampedDatabaseTable<Double>
 
     /// The table to store strings and optional strings
-    private let stringTable: TimestampedDatabaseTable<M, I, P, String>
+    private let stringTable: TimestampedDatabaseTable<String>
 
     /// The table to store binary values and any encodable types that don't match the other tables
-    private let binaryTable: TimestampedDatabaseTable<M, I, P, Data>
+    private let binaryTable: TimestampedDatabaseTable<Data>
 
     /// The table to store the current status for all instances for quicker retrieval on select queries
-    private let instanceTable: TimestampedInstanceTable<M, I>
+    private let instanceTable: TimestampedInstanceTable
 
     /// The encoder to use for `Codable` types that do not match as integers, doubles or strings
     private let encoder: any GenericEncoder
@@ -63,7 +59,6 @@ public final class SQLiteHistoryDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteK
         self.stringTable = try .init(name: "s", database: database)
         self.binaryTable = try .init(name: "b", database: database)
         self.instanceTable = try .init(name: "o", database: database)
-        super.init()
     }
 
 
@@ -72,7 +67,7 @@ public final class SQLiteHistoryDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteK
     /**
      Internal function to set properties.
      */
-    private func storeThrowing<Value>(_ value: Value, for path: KeyPath, at date: Date?) throws where Value: Codable {
+    private func storeThrowing<Value>(_ value: Value, for path: Path, at date: Date?) throws where Value: Codable {
         let storedDate = date ?? Date()
         switch Value.self {
         case is InstanceStatus.Type:
@@ -107,7 +102,7 @@ public final class SQLiteHistoryDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteK
         }
     }
 
-    private func readThrowing<Value>(_ path: KeyPath, at date: Date?) throws -> (value: Value, date: Date)? where Value: DatabaseValue {
+    private func readThrowing<Value>(_ path: Path, at date: Date?) throws -> (value: Value, date: Date)? where Value: DatabaseValue {
         switch Value.self {
         case is InstanceStatus.Type:
             // First match instance information
@@ -144,7 +139,7 @@ public final class SQLiteHistoryDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteK
 
     // MARK: Typed setters
 
-    func storeStatus(_ value: InstanceStatus, for path: KeyPath, at date: Date) throws {
+    func storeStatus(_ value: InstanceStatus, for path: Path, at date: Date) throws {
         // If the instance status really targets an instance, also save the info to an additional table
         // This is used to improve the select queries, where only the most recent values are of interest
         // Storage is only performed only if the timestamp of the current sample is newer
@@ -155,7 +150,7 @@ public final class SQLiteHistoryDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteK
         return try storeInt(value.rawValue.intValue, for: path, at: date)
     }
 
-    private func storeInstanceStatus(_ value: InstanceStatus, for path: KeyPath, at date: Date) throws {
+    private func storeInstanceStatus(_ value: InstanceStatus, for path: Path, at date: Date) throws {
         if let previous = try instanceTable.value(for: path.model, instance: path.instance)?.date,
            previous > date {
             return
@@ -163,7 +158,7 @@ public final class SQLiteHistoryDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteK
         try instanceTable.update(value: value, model: path.model, instance: path.instance, timestamp: date)
     }
 
-    func storeOptionalCodable(_ value: any CodableOptional, for path: KeyPath, at date: Date) throws {
+    func storeOptionalCodable(_ value: any CodableOptional, for path: Path, at date: Date) throws {
         // For Codable types, unpack one level of Optionals which is
         // handled by SQLite NULL values
         if value.isNil {
@@ -175,36 +170,36 @@ public final class SQLiteHistoryDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteK
     }
 
     @inline(__always)
-    func storeCodable<Value: Codable>(_ value: Value, for path: KeyPath, at date: Date) throws {
+    func storeCodable<Value: Codable>(_ value: Value, for path: Path, at date: Date) throws {
         // Encode non-optionals
         let data: Data? = try encoder.encode(value)
         return try storeData(data, for: path, at: date)
     }
 
     @inline(__always)
-    func storeInt(_ value: Int64?, for path: KeyPath, at date: Date) throws {
+    func storeInt(_ value: Int64?, for path: Path, at date: Date) throws {
         try integerTable.insert(value: value, for: path, at: date)
     }
 
     @inline(__always)
-    func storeDouble(_ value: Double?, for path: KeyPath, at date: Date) throws {
+    func storeDouble(_ value: Double?, for path: Path, at date: Date) throws {
         try doubleTable.insert(value: value, for: path, at: date)
     }
 
     @inline(__always)
-    func storeString(_ value: String?, for path: KeyPath, at date: Date) throws {
+    func storeString(_ value: String?, for path: Path, at date: Date) throws {
         try stringTable.insert(value: value, for: path, at: date)
     }
 
     @inline(__always)
-    func storeData(_ value: Data?, for path: KeyPath, at date: Date) throws {
+    func storeData(_ value: Data?, for path: Path, at date: Date) throws {
         try binaryTable.insert(value: value, for: path, at: date)
     }
 
     // MARK: Typed getters
 
     @inline(__always)
-    func readStatus(_ path: KeyPath, at date: Date?) throws -> Timestamped<InstanceStatus>? {
+    func readStatus(_ path: Path, at date: Date?) throws -> Timestamped<InstanceStatus>? {
         if path.property == PropertyKey.instanceId, date == nil {
             return try instanceTable.value(for: path.model, instance: path.instance)
         }
@@ -216,47 +211,47 @@ public final class SQLiteHistoryDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteK
     }
 
     @inline(__always)
-    func readInt(_ path: KeyPath, at date: Date?) throws -> Timestamped<Int64>? {
+    func readInt(_ path: Path, at date: Date?) throws -> Timestamped<Int64>? {
         try integerTable.value(for: path, at: date)
     }
 
     @inline(__always)
-    func readOptionalInt(_ path: KeyPath, at date: Date?) throws -> Timestamped<Int64?>? {
+    func readOptionalInt(_ path: Path, at date: Date?) throws -> Timestamped<Int64?>? {
         try integerTable.optionalValue(for: path, at: date)
     }
 
     @inline(__always)
-    func readDouble(_ path: KeyPath, at date: Date?) throws -> Timestamped<Double>? {
+    func readDouble(_ path: Path, at date: Date?) throws -> Timestamped<Double>? {
         try doubleTable.value(for: path, at: date)
     }
 
     @inline(__always)
-    func readOptionalDouble(_ path: KeyPath, at date: Date?) throws -> Timestamped<Double?>? {
+    func readOptionalDouble(_ path: Path, at date: Date?) throws -> Timestamped<Double?>? {
         try doubleTable.optionalValue(for: path, at: date)
     }
 
     @inline(__always)
-    func readString(_ path: KeyPath, at date: Date?) throws -> Timestamped<String>? {
+    func readString(_ path: Path, at date: Date?) throws -> Timestamped<String>? {
         try stringTable.value(for: path, at: date)
     }
 
     @inline(__always)
-    func readOptionalString(_ path: KeyPath, at date: Date?) throws -> Timestamped<String?>? {
+    func readOptionalString(_ path: Path, at date: Date?) throws -> Timestamped<String?>? {
         try stringTable.optionalValue(for: path, at: date)
     }
 
     @inline(__always)
-    func readData(_ path: KeyPath, at date: Date?) throws -> Timestamped<Data>? {
+    func readData(_ path: Path, at date: Date?) throws -> Timestamped<Data>? {
         try binaryTable.value(for: path, at: date)
     }
 
     @inline(__always)
-    func readOptionalData(_ path: KeyPath, at date: Date?) throws -> Timestamped<Data?>? {
+    func readOptionalData(_ path: Path, at date: Date?) throws -> Timestamped<Data?>? {
         try binaryTable.optionalValue(for: path, at: date)
     }
 
     @inline(__always)
-    func read<T>(codableOptional: T.Type, _ path: KeyPath, at date: Date?) throws -> Timestamped<T>? where T: CodableOptional {
+    func read<T>(codableOptional: T.Type, _ path: Path, at date: Date?) throws -> Timestamped<T>? where T: CodableOptional {
         guard let (data, date) = try readOptionalData(path, at: date) else {
             return nil
         }
@@ -269,7 +264,7 @@ public final class SQLiteHistoryDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteK
     }
 
     @inline(__always)
-    func read<Value>(codable: Value.Type, _ path: KeyPath, at date: Date?) throws -> Timestamped<Value>? where Value: Codable {
+    func read<Value>(codable: Value.Type, _ path: Path, at date: Date?) throws -> Timestamped<Value>? where Value: Codable {
         guard let (data, date) = try readData(path, at: date) else {
             return nil
         }
@@ -284,7 +279,7 @@ public final class SQLiteHistoryDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteK
      - Parameter path: The unique identifier of the property
      - Returns: The value of the property, if one exists
      */
-    public override func get<Value>(_ path: KeyPath, at date: Date?) -> (value: Value, date: Date)? where Value: DatabaseValue {
+    public func get<Value>(_ path: Path, at date: Date?) -> (value: Value, date: Date)? where Value: DatabaseValue {
         do {
             return try readThrowing(path, at: date)
         } catch {
@@ -298,7 +293,7 @@ public final class SQLiteHistoryDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteK
      - Parameter value: The new value to set for the property
      - Parameter path: The unique identifier of the property
      */
-    public override func set<Value>(_ value: Value, for path: KeyPath, at date: Date?) where Value: DatabaseValue {
+    public func set<Value>(_ value: Value, for path: Path, at date: Date?) where Value: DatabaseValue {
         do {
             return try storeThrowing(value, for: path, at: date)
         } catch {
@@ -318,7 +313,7 @@ public final class SQLiteHistoryDatabase<M: SQLiteKey & ModelKeyType, I: SQLiteK
      - Parameter status: The instance status of the path.
      - Returns: The list of all search results that were returned by the `predicate`
      */
-    public override func all<T>(
+    public func all<T>(
         model: ModelKey,
         at date: Date?,
         where predicate: (_ instance: InstanceKey, _ status: InstanceStatus, _ date: Date) -> T?

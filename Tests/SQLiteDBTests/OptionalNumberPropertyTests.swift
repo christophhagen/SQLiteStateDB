@@ -2,9 +2,8 @@ import CoreFoundation
 import Testing
 import StateModel
 
-private final class NumberModel: TestBaseModel {
-
-    static let modelId = 1
+@Model(id: 1)
+private final class NumberModel {
 
     @Property(id: 1, default: nil)
     var int: Int?

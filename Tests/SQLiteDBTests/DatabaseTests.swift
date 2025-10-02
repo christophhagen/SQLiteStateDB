@@ -18,7 +18,7 @@ struct DatabaseTests {
         var property = 1
 
         func testGetSet<T: Codable & Equatable>(_ value: T, of type: T.Type = T.self) {
-            let path = TestDatabase.KeyPath(model: 1, instance: 1, property: property)
+            let path = Path(model: 1, instance: 1, property: property)
             database.set(value, for: path)
             guard let retrievedValue: T = database.get(path) else {
                 Issue.record("Could not find value in database for '\(value)' (\(T.self))")
@@ -58,7 +58,7 @@ struct DatabaseTests {
     func invalidJsonDecoding() async throws {
         let database = try TestDatabase(encoder: JSONEncoder(), decoder: JSONDecoder())
 
-        let path = TestDatabase.KeyPath(model: 1, instance: 1, property: 1)
+        let path = Path(model: 1, instance: 1, property: 1)
 
         let value: Int??? = .some(.some(.none))
         database.set(value, for: path)

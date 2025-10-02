@@ -1,15 +1,15 @@
 import SQLite
 import StateModel
 
-struct InstanceTable<M: Value, I: Value> where M.Datatype: Equatable, I.Datatype: Equatable {
+struct InstanceTable {
 
     private let database: Connection
 
     private let table: Table
 
-    private let modelId = Expression<M>("m")
+    private let modelId = Expression<Int>("m")
 
-    private let instanceId = Expression<I>("i")
+    private let instanceId = Expression<Int>("i")
 
     private let value = Expression<Int>("v")
 
@@ -39,7 +39,7 @@ struct InstanceTable<M: Value, I: Value> where M.Datatype: Equatable, I.Datatype
         try database.run(indexQuery)
     }
 
-    func all<T>(model: M, where predicate: (_ instance: I, _ status: InstanceStatus) -> T?) throws -> [T] {
+    func all<T>(model: ModelKey, where predicate: (_ instance: InstanceKey, _ status: InstanceStatus) -> T?) throws -> [T] {
         let query = table
             .filter(modelId == model)
         return try database.prepare(query).compactMap { row in
@@ -51,7 +51,7 @@ struct InstanceTable<M: Value, I: Value> where M.Datatype: Equatable, I.Datatype
         }
     }
 
-    func update(value: InstanceStatus, model: M, instance: I) throws {
+    func update(value: InstanceStatus, model: ModelKey, instance: InstanceKey) throws {
         let query = table.insert(or: .replace,
             modelId <- model,
             instanceId <- instance,
@@ -65,7 +65,7 @@ struct InstanceTable<M: Value, I: Value> where M.Datatype: Equatable, I.Datatype
      - Parameter path: The path to search for in the table.
      - Returns: The value for the row with the given path, or `nil`, if the value column is `NULL` or if no row exists for the given path.
      */
-    func value(model: M, instance: I) throws -> InstanceStatus? {
+    func value(model: ModelKey, instance: InstanceKey) throws -> InstanceStatus? {
         let query = table
             .filter(modelId == model && instanceId == instance)
             .limit(1)

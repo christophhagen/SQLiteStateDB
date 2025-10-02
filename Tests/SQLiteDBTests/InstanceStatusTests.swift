@@ -3,9 +3,8 @@ import SQLiteDB
 import BinaryCodable
 import StateModel
 
-private final class InstanceModel: TestBaseModel {
-
-    static let modelId = 1
+@Model(id: 1)
+private final class InstanceModel {
 
     @Property(id: 1, default: InstanceStatus.deleted)
     var state: InstanceStatus
