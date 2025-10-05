@@ -5,46 +5,46 @@ import StateModel
 @Model(id: 1)
 private final class NumberModel {
 
-    @Property(id: 1, default: nil)
+    @Property(id: 1)
     var int: Int?
 
-    @Property(id: 2, default: nil)
+    @Property(id: 2)
     var int8: Int8?
 
-    @Property(id: 3, default: nil)
+    @Property(id: 3)
     var int16: Int16?
 
-    @Property(id: 4, default: nil)
+    @Property(id: 4)
     var int32: Int32?
 
-    @Property(id: 5, default: nil)
+    @Property(id: 5)
     var int64: Int64?
 
-    @Property(id: 6, default: nil)
+    @Property(id: 6)
     var uint: UInt?
 
-    @Property(id: 7, default: nil)
+    @Property(id: 7)
     var uint8: UInt8?
 
-    @Property(id: 8, default: nil)
+    @Property(id: 8)
     var uint16: UInt16?
 
-    @Property(id: 9, default: nil)
+    @Property(id: 9)
     var uint32: UInt32?
 
-    @Property(id: 10, default: nil)
+    @Property(id: 10)
     var uint64: UInt64?
 
-    @Property(id: 11, default: nil)
+    @Property(id: 11)
     var double: Double?
 
-    @Property(id: 12, default: nil)
+    @Property(id: 12)
     var float: Float?
 
-    @Property(id: 13, default: nil)
+    @Property(id: 13)
     var float16: Float16?
 
-    @Property(id: 14, default: nil)
+    @Property(id: 14)
     var cgFloat: CGFloat?
 }
 

@@ -6,8 +6,8 @@ import StateModel
 @Model(id: 1)
 private final class InstanceModel {
 
-    @Property(id: 1, default: InstanceStatus.deleted)
-    var state: InstanceStatus
+    @Property(id: 1)
+    var state: InstanceStatus = .deleted
 }
 
 @Suite("Instance status")

@@ -44,8 +44,8 @@ private final class NumberModel {
     @Property(id: 13)
     var float16: Float16
 
-    @Property(id: 14, default: 0)
-    var cgFloat: CGFloat
+    @Property(id: 14)
+    var cgFloat: CGFloat = 0
 }
 
 @Suite("Number properties")
