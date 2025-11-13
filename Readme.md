@@ -8,7 +8,7 @@ Integrate this package like you would any other:
 ```
 ...
     dependencies: [
-        .package(url: "https://github.com/christophhagen/SQLiteStateDB", from: "2.0.0")
+        .package(url: "https://github.com/christophhagen/SQLiteStateDB", from: "5.0.0")
     ],
 ...
     .target(
