@@ -4,8 +4,8 @@ import StateModel
 @testable import SQLiteDB
 import BinaryCodable
 
-extension BinaryEncoder: GenericEncoder { }
-extension BinaryDecoder: GenericDecoder { }
+extension BinaryEncoder: @retroactive GenericEncoder { }
+extension BinaryDecoder: @retroactive GenericDecoder { }
 
 
 @Suite("Database tests")

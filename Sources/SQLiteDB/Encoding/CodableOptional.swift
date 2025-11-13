@@ -1,4 +1,5 @@
 import Foundation
+import StateModel
 
 /**
  A protocol to cover optional types that are encodable.
