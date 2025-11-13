@@ -44,8 +44,10 @@ private final class NumberModel {
     @Property(id: 13)
     var float16: Float16
 
+#if canImport(CoreGraphics)
     @Property(id: 14)
     var cgFloat: CGFloat = 0
+#endif
 }
 
 @Suite("Number properties")
@@ -208,6 +210,7 @@ struct NumberPropertyTests {
         #expect(model.float16 == .greatestFiniteMagnitude)
     }
 
+#if canImport(CoreGraphics)
     @Test("CGFloat")
     func testPropertyGetSetCGFloat() throws {
         let database = try TestDatabase()
@@ -219,4 +222,5 @@ struct NumberPropertyTests {
         model.cgFloat = .greatestFiniteMagnitude
         #expect(model.cgFloat == .greatestFiniteMagnitude)
     }
+#endif
 }

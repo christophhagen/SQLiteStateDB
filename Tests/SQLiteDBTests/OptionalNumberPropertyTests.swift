@@ -44,8 +44,10 @@ private final class NumberModel {
     @Property(id: 13)
     var float16: Float16?
 
+#if canImport(CoreGraphics)
     @Property(id: 14)
     var cgFloat: CGFloat?
+#endif
 }
 
 @Suite("Optional properties")
@@ -222,6 +224,7 @@ struct OptionalNumberPropertyTests {
         #expect(model.float16 == nil)
     }
 
+#if canImport(CoreGraphics)
     @Test("CGFloat")
     func testPropertyGetSetCGFloat() throws {
         let database = try TestDatabase()
@@ -235,4 +238,5 @@ struct OptionalNumberPropertyTests {
         model.cgFloat = nil
         #expect(model.cgFloat == nil)
     }
+#endif
 }
