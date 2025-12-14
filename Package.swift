@@ -17,7 +17,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/stephencelis/SQLite.swift.git", from: "0.15.4"),
-        .package(url: "https://github.com/christophhagen/StateModel.git", from: "7.0.0"),
+        .package(url: "https://github.com/christophhagen/StateModel.git", from: "8.0.0"),
         .package(url: "https://github.com/christophhagen/BinaryCodable.git", from: "3.1.0"),
     ],
     targets: [
