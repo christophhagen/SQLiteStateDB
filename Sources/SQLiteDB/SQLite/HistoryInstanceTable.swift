@@ -2,7 +2,7 @@ import Foundation
 import SQLite
 import StateModel
 
-struct TimestampedInstanceTable {
+struct HistoryInstanceTable {
 
     private let database: Connection
 

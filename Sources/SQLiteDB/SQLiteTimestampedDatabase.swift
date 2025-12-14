@@ -3,31 +3,31 @@ import SQLite
 import StateModel
 
 /**
- A SQLite Database suitable to act as a database for StateModel.
+ A SQLite Database suitable to act as a timestamped database for StateModel.
 
  The database separates the values into separate databases for integers, doubles, strings, and data.
  An additional table tracks the model instance status properties to provide the model selection functionality.
  All values are stored with a timestamp to provide a history.
  */
-public final class SQLiteHistoryDatabase: HistoryDatabase {
+public final class SQLiteTimestampedDatabase {
 
     /// The connection to the database
     private let connection: Connection
 
     /// The table to store all values that can be converted to integers
-    private let integerTable: HistoryTable<Int64>
+    private let integerTable: TimestampedTable<Int64>
 
     /// The table to store all values that can be converted to double values
-    private let doubleTable: HistoryTable<Double>
+    private let doubleTable: TimestampedTable<Double>
 
     /// The table to store strings and optional strings
-    private let stringTable: HistoryTable<String>
+    private let stringTable: TimestampedTable<String>
 
     /// The table to store binary values and any encodable types that don't match the other tables
-    private let binaryTable: HistoryTable<Data>
+    private let binaryTable: TimestampedTable<Data>
 
     /// The table to store the current status for all instances for quicker retrieval on select queries
-    private let instanceTable: HistoryInstanceTable
+    private let instanceTable: TimestampedInstanceTable
 
     /// The encoder to use for `Codable` types that do not match as integers, doubles or strings
     private let encoder: any GenericEncoder
@@ -100,39 +100,35 @@ public final class SQLiteHistoryDatabase: HistoryDatabase {
         }
     }
 
-    private func readThrowing<Value: DatabaseValue>(_ path: Path, at date: Date?) throws -> Timestamped<Value>? {
+    private func readThrowing<Value>(_ path: Path) throws -> Timestamped<Value>? where Value: DatabaseValue {
         switch Value.self {
         case is InstanceStatus.Type:
             // First match instance information
             // The info is still stored in the integer table,
             // so we get the info from there
-            return try readStatus(path, at: date).asResult()
+            return try readStatus(path).asResult()
         case let IntValue as IntegerConvertible.Type:
             // Get all integer values
-            guard let point = try readInt(path, at: date) else { return nil }
-            return point.map { $0.converted(to: IntValue.self).asResult() }
+            return try readInt(path)?.map { $0.converted(to: IntValue.self).asResult() }
         case let IntValue as OptionalIntegerConvertible.Type:
-            guard let point = try readOptionalInt(path, at: date) else { return nil }
-            return point.map { (IntValue.init(intValue: $0) as! Value) }
+            return try readOptionalInt(path)?.map { IntValue.init(intValue: $0) as! Value }
         case let DoubleValue as DoubleConvertible.Type:
-            guard let point = try readDouble(path, at: date) else { return nil }
-            return point.map { $0.converted(to: DoubleValue.self).asResult() }
+            return try readDouble(path)?.map { $0.converted(to: DoubleValue.self).asResult() }
         case let DoubleValue as OptionalDoubleConvertible.Type:
-            guard let point = try readDouble(path, at: date) else { return nil }
-            return point.map { DoubleValue.init(doubleValue: $0) as! Value }
+            return try readDouble(path)?.map { DoubleValue.init(doubleValue: $0) as! Value }
         case is String.Type:
-            return try readString(path, at: date).asResult()
+            return try readString(path).asResult()
         case is String?.Type:
-            return try readOptionalString(path, at: date).asResult()
+            return try readOptionalString(path).asResult()
         case is Data.Type:
-            return try readData(path, at: date).asResult()
+            return try readData(path).asResult()
         case is Data?.Type:
-            return try readOptionalData(path, at: date).asResult()
+            return try readOptionalData(path).asResult()
         case let OptionalValue as CodableOptional.Type:
-            return try read(codableOptional: OptionalValue.self, path, at: date)
+            return try read(codableOptional: OptionalValue.self, path)
                 .map { Timestamped(value: $0.value as! Value, date: $0.date) }
         default:
-            return try read(codable: Value.self, path, at: date)
+            return try read(codable: Value.self, path)
         }
     }
 
@@ -198,11 +194,11 @@ public final class SQLiteHistoryDatabase: HistoryDatabase {
     // MARK: Typed getters
 
     @inline(__always)
-    func readStatus(_ path: Path, at date: Date?) throws -> Timestamped<InstanceStatus>? {
-        if path.property == PropertyKey.instanceId, date == nil {
+    func readStatus(_ path: Path) throws -> Timestamped<InstanceStatus>? {
+        if path.property == PropertyKey.instanceId {
             return try instanceTable.value(for: path.model, instance: path.instance)
         }
-        guard let point = try readInt(path, at: date),
+        guard let point = try readInt(path),
               let value = point.value.converted(to: InstanceStatus.self) else {
             return nil
         }
@@ -210,120 +206,65 @@ public final class SQLiteHistoryDatabase: HistoryDatabase {
     }
 
     @inline(__always)
-    func readInt(_ path: Path, at date: Date?) throws -> Timestamped<Int64>? {
-        try integerTable.value(for: path, at: date)
+    func readInt(_ path: Path) throws -> Timestamped<Int64>? {
+        try integerTable.value(for: path)
     }
 
     @inline(__always)
-    func readOptionalInt(_ path: Path, at date: Date?) throws -> Timestamped<Int64?>? {
-        try integerTable.optionalValue(for: path, at: date)
+    func readOptionalInt(_ path: Path) throws -> Timestamped<Int64?>? {
+        try integerTable.optionalValue(for: path)
     }
 
     @inline(__always)
-    func readDouble(_ path: Path, at date: Date?) throws -> Timestamped<Double>? {
-        try doubleTable.value(for: path, at: date)
+    func readDouble(_ path: Path) throws -> Timestamped<Double>? {
+        try doubleTable.value(for: path)
     }
 
     @inline(__always)
-    func readOptionalDouble(_ path: Path, at date: Date?) throws -> Timestamped<Double?>? {
-        try doubleTable.optionalValue(for: path, at: date)
+    func readOptionalDouble(_ path: Path) throws -> Timestamped<Double?>? {
+        try doubleTable.optionalValue(for: path)
     }
 
     @inline(__always)
-    func readString(_ path: Path, at date: Date?) throws -> Timestamped<String>? {
-        try stringTable.value(for: path, at: date)
+    func readString(_ path: Path) throws -> Timestamped<String>? {
+        try stringTable.value(for: path)
     }
 
     @inline(__always)
-    func readOptionalString(_ path: Path, at date: Date?) throws -> Timestamped<String?>? {
-        try stringTable.optionalValue(for: path, at: date)
+    func readOptionalString(_ path: Path) throws -> Timestamped<String?>? {
+        try stringTable.optionalValue(for: path)
     }
 
     @inline(__always)
-    func readData(_ path: Path, at date: Date?) throws -> Timestamped<Data>? {
-        try binaryTable.value(for: path, at: date)
+    func readData(_ path: Path) throws -> Timestamped<Data>? {
+        try binaryTable.value(for: path)
     }
 
     @inline(__always)
-    func readOptionalData(_ path: Path, at date: Date?) throws -> Timestamped<Data?>? {
-        try binaryTable.optionalValue(for: path, at: date)
+    func readOptionalData(_ path: Path) throws -> Timestamped<Data?>? {
+        try binaryTable.optionalValue(for: path)
     }
 
     @inline(__always)
-    func read<T>(codableOptional: T.Type, _ path: Path, at date: Date?) throws -> (value: T, date: Date)? where T: CodableOptional {
-        guard let point = try readOptionalData(path, at: date) else {
+    func read<T>(codableOptional: T.Type, _ path: Path) throws -> (value: T, date: Date)? where T: CodableOptional {
+        guard let encoded = try readOptionalData(path) else {
             return nil
         }
-        if let data = point.value {
+        if let data = encoded.value {
             let value = try T.decodeWrapped(from: data, with: decoder)
-            return (value, point.date)
+            return (value: value, date: encoded.date)
         } else {
-            return (T.nilValue, point.date)
+            return (value: T.nilValue, date: encoded.date)
         }
     }
 
     @inline(__always)
-    func read<Value>(codable: Value.Type, _ path: Path, at date: Date?) throws -> Timestamped<Value>? where Value: Codable {
-        guard let point = try readData(path, at: date) else {
+    func read<Value>(codable: Value.Type, _ path: Path) throws -> Timestamped<Value>? where Value: Codable {
+        guard let encoded = try readData(path) else {
             return nil
         }
-        return try point.map {
-            try decoder.decode(Value.self, from: $0)
-        }
-    }
-
-// MARK: Database protocol
-
-    /**
-     Get the value for a specific property.
-     - Parameter path: The unique identifier of the property
-     - Returns: The value of the property, if one exists
-     */
-    public func get<Value>(_ path: Path, at date: Date?) -> Timestamped<Value>? where Value: DatabaseValue {
-        do {
-            return try readThrowing(path, at: date)
-        } catch {
-            print("Failed to get \(path): \(error)")
-            return nil
-        }
-    }
-
-    /**
-     Set the value for a specific property.
-     - Parameter value: The new value to set for the property
-     - Parameter path: The unique identifier of the property
-     */
-    public func set<Value>(_ value: Value, for path: Path, at date: Date?) where Value: DatabaseValue {
-        do {
-            return try storeThrowing(value, for: path, at: date)
-        } catch {
-            print("Failed to set \(path) to \(value): \(error)")
-        }
-    }
-
-    /**
-     Provide specific properties in the database to a conversion function.
-
-     This function must provide all properties in the database that match a model id and a property id,
-     and that are of type `InstanceStatus`. This function is used to select all instances of a model with specific properties.
-     - Parameter modelId: The model id to match
-     - Parameter propertyId: The property id to match
-     - Parameter predicate: The conversion function to call for each result of the search
-     - Parameter instanceId: The instance id of the path that contained the `status`
-     - Parameter status: The instance status of the path.
-     - Returns: The list of all search results that were returned by the `predicate`
-     */
-    public func all<T>(
-        model: ModelKey,
-        at date: Date?,
-        where predicate: (_ instance: InstanceKey, _ status: InstanceStatus, _ date: Date) -> T?
-    ) -> [T] {
-        do {
-            return try instanceTable.all(model: model, where: predicate)
-        } catch {
-            print("Failed to select \(String(describing: T.self)): \(error)")
-            return []
-        }
+        let value = try decoder.decode(Value.self, from: encoded.value)
+        return .init(value: value, date: encoded.date)
     }
 
     // MARK: Counting
@@ -354,9 +295,58 @@ public final class SQLiteHistoryDatabase: HistoryDatabase {
     }
 }
 
-extension Timestamped {
+// MARK: Database protocol
 
-    func map<T>(_ convert: (Value) throws -> T) rethrows -> Timestamped<T> {
-        .init(value: try convert(value), date: date)
+extension SQLiteTimestampedDatabase: TimestampedDatabase {
+
+    /**
+     Get the value for a specific property.
+     - Parameter path: The unique identifier of the property
+     - Returns: The value of the property, if one exists
+     */
+    public func get<Value: DatabaseValue>(_ path: Path) -> Timestamped<Value>? {
+        do {
+            return try readThrowing(path)
+        } catch {
+            print("Failed to get \(path): \(error)")
+            return nil
+        }
+    }
+
+    /**
+     Set the value for a specific property.
+     - Parameter value: The new value to set for the property
+     - Parameter path: The unique identifier of the property
+     */
+    public func set<Value: DatabaseValue>(_ value: Value, for path: Path, at date: Date?) {
+        do {
+            return try storeThrowing(value, for: path, at: date)
+        } catch {
+            print("Failed to set \(path) to \(value): \(error)")
+        }
+    }
+
+    /**
+     Provide specific properties in the database to a conversion function.
+
+     This function must provide all properties in the database that match a model id and a property id,
+     and that are of type `InstanceStatus`. This function is used to select all instances of a model with specific properties.
+     - Parameter modelId: The model id to match
+     - Parameter propertyId: The property id to match
+     - Parameter predicate: The conversion function to call for each result of the search
+     - Parameter instanceId: The instance id of the path that contained the `status`
+     - Parameter status: The instance status of the path.
+     - Returns: The list of all search results that were returned by the `predicate`
+     */
+    public func all<T>(
+        model: ModelKey,
+        where predicate: (_ instance: InstanceKey, _ status: InstanceStatus, _ date: Date) -> T?
+    ) -> [T] {
+        do {
+            return try instanceTable.all(model: model, where: predicate)
+        } catch {
+            print("Failed to select \(String(describing: T.self)): \(error)")
+            return []
+        }
     }
 }
