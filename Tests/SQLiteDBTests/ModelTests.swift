@@ -1,13 +1,14 @@
 import Foundation
 import Testing
 @testable import StateModel
+import SQLiteDB
 
 @Suite("Models")
 struct ModelTests {
 
     @Test("Inter-instance property independence")
     func testProperty() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let instanceA: TestModel = database.create(id: 123)
         #expect(instanceA.a == 0)
@@ -30,7 +31,7 @@ struct ModelTests {
 
     @Test("Model reference")
     func testReferenceProperty() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let instanceA: TestModel = database.create(id: 123)
         instanceA.a = 123
@@ -44,7 +45,7 @@ struct ModelTests {
 
     @Test("Model reference list")
     func testListProperty() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let instanceA: TestModel = database.create(id: 123)
         #expect(instanceA.list.isEmpty)
@@ -67,7 +68,7 @@ struct ModelTests {
      */
     @Test("Select all model instances")
     func testGetAllModels() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         var all = database.all(of: TestModel.self)
         #expect(all.isEmpty)
@@ -105,7 +106,7 @@ struct ModelTests {
 
     @Test("Filter models")
     func testFilterModels() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model1: TestModel = database.create(id: 1)
         let model2: TestModel = database.create(id: 2)
@@ -123,7 +124,7 @@ struct ModelTests {
 
     @Test("Delete instances")
     func testDeleteInstances() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model = database.create(id: 1, of: TestModel.self)
         #expect(model.status == .created)
@@ -147,7 +148,7 @@ struct ModelTests {
 
     @Test("Modify properties")
     func testPropertyModification() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model = database.create(id: 1, of: TestModel.self)
 
@@ -164,7 +165,7 @@ struct ModelTests {
 
     @Test("Modify nested models")
     func testModelModification() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model = database.create(id: 1, of: TestModel.self)
         let nested = database.create(id: 123, of: NestedModel.self)
@@ -181,7 +182,7 @@ struct ModelTests {
 
     @Test("Remove reference")
     func testRemoveModelReference() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model = database.create(id: 1, of: TestModel.self)
         let nested = database.create(id: 123, of: NestedModel.self)
@@ -194,7 +195,7 @@ struct ModelTests {
 
     @Test("Delete referenced models")
     func testReferenceDeletion() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model = database.create(id: 1, of: TestModel.self)
         let nested = database.create(id: 123, of: NestedModel.self)
@@ -208,7 +209,7 @@ struct ModelTests {
 
     @Test("Delete referenced list items")
     func testDeletedListItems() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model = database.create(id: 1, of: TestModel.self)
         let nested = database.create(id: 123, of: NestedModel.self)

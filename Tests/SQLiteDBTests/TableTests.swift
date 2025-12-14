@@ -13,17 +13,32 @@ struct TableTests {
     @Test("Insert twice")
     func insertSameTimestampTwice() async throws {
 
-        let database = try TestHistoryDatabase()
+        do {
+            let database = try SQLiteHistoryDatabase()
 
-        #expect(database.numberOfIntegerValues == 0)
-        let now = Date()
-        database.set(123, model: 1, instance: 1, property: 1, at: now)
-        #expect(database.numberOfIntegerValues == 1)
-        database.set(124, model: 1, instance: 1, property: 1, at: now)
-        #expect(database.numberOfIntegerValues == 1)
+            #expect(database.numberOfIntegerValues == 0)
+            let now = Date()
+            database.set(123, model: 1, instance: 1, property: 1, at: now)
+            #expect(database.numberOfIntegerValues == 1)
+            database.set(124, model: 1, instance: 1, property: 1, at: now)
+            #expect(database.numberOfIntegerValues == 1)
 
-        database.set(123, model: 1, instance: 1, property: 1, at: now.addingTimeInterval(1))
-        #expect(database.numberOfIntegerValues == 2)
+            database.set(123, model: 1, instance: 1, property: 1, at: now.addingTimeInterval(1))
+            #expect(database.numberOfIntegerValues == 2)
+        }
+
+        do {
+            let database = try SQLiteTimestampedDatabase()
+
+            #expect(database.numberOfIntegerValues == 0)
+            database.set(123, model: 1, instance: 1, property: 1)
+            #expect(database.numberOfIntegerValues == 1)
+            database.set(124, model: 1, instance: 1, property: 1)
+            #expect(database.numberOfIntegerValues == 1)
+
+            database.set(123, model: 1, instance: 1, property: 1)
+            #expect(database.numberOfIntegerValues == 1)
+        }
     }
 
     /**
@@ -32,7 +47,7 @@ struct TableTests {
     @Test("Insert old instance status")
     func insertOldStatus() async throws {
 
-        let database = try TestHistoryDatabase()
+        let database = try SQLiteHistoryDatabase()
 
         #expect(database.numberOfInstances == 0)
         #expect(database.numberOfIntegerValues == 0)
@@ -46,11 +61,11 @@ struct TableTests {
         #expect(database.numberOfInstances == 1)
         #expect(database.numberOfIntegerValues == 2)
 
-        let data: (InstanceStatus, Date)? = database.get(model: 1, instance: 1, property: Int.instanceId, at: now)
+        let data: Timestamped<InstanceStatus>? = database.get(model: 1, instance: 1, property: Int.instanceId, at: now)
         #expect(data != nil)
-        #expect(data?.0 == .created)
+        #expect(data?.value == .created)
 
-        let currentData: (InstanceStatus, Date)? = database.get(model: 1, instance: 1, property: Int.instanceId, at: nil)
+        let currentData: Timestamped<InstanceStatus>? = database.get(model: 1, instance: 1, property: Int.instanceId, at: nil)
         #expect(currentData != nil)
         let current: InstanceStatus? = database.get(model: 1, instance: 1, property: Int.instanceId)
         #expect(current != nil)

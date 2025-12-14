@@ -13,7 +13,7 @@ struct DatabaseTests {
 
     @Test("Test primitive read/write")
     func testPrimitiveReadWrite() throws {
-        let database = try TestDatabase(encoder: BinaryEncoder(), decoder: BinaryDecoder())
+        let database = try SQLiteDatabase(encoder: BinaryEncoder(), decoder: BinaryDecoder())
 
         var property = 1
 
@@ -56,7 +56,7 @@ struct DatabaseTests {
 
     @Test("Invalid JSON optional encoding")
     func invalidJsonDecoding() async throws {
-        let database = try TestDatabase(encoder: JSONEncoder(), decoder: JSONDecoder())
+        let database = try SQLiteDatabase()
 
         let path = Path(model: 1, instance: 1, property: 1)
 

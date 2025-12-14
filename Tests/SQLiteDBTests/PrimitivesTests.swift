@@ -3,7 +3,8 @@ import Testing
 import SQLiteDB
 import StateModel
 
-private extension TestDatabase {
+private extension SQLiteDatabase {
+
     func testGetSet<T: Codable & Equatable>(_ value: T, of type: T.Type = T.self, property: Int = 1) {
         let path = Path(model: 1, instance: 1, property: property)
         set(value, for: path)
@@ -20,14 +21,14 @@ struct PrimitivesTests {
 
     @Test("Double")
     func testDoubleGetSet() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         database.testGetSet(3.14)
     }
 
     @Test("Double?")
     func testOptionalDoubleGetSet() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         database.testGetSet(3.14, of: Double?.self, property: 1)
         database.testGetSet(nil, of: Double?.self, property: 2)
@@ -35,14 +36,14 @@ struct PrimitivesTests {
 
     @Test("String")
     func testStringGetSet() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         database.testGetSet("abc")
     }
 
     @Test("String?")
     func testOptionalStringGetSet() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         database.testGetSet("abc", of: String?.self, property: 1)
         database.testGetSet(nil, of: String?.self, property: 2)
@@ -50,7 +51,7 @@ struct PrimitivesTests {
 
     @Test("Data")
     func testDataGetSet() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         database.testGetSet(Data(repeating: 3, count: 4), of: Data.self, property: 1)
         database.testGetSet(Data(), of: Data.self, property: 2)
@@ -58,7 +59,7 @@ struct PrimitivesTests {
 
     @Test("Data?")
     func testOptionalDataGetSet() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         database.testGetSet(Data(repeating: 3, count: 4), of: Data?.self, property: 1)
         database.testGetSet(nil, of: Data?.self, property: 2)
@@ -66,7 +67,7 @@ struct PrimitivesTests {
 
     @Test("Int??")
     func testDoubleOptionalIntGetSet() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         database.testGetSet(nil, of: Int??.self, property: 1)
         database.testGetSet(.some(nil), of: Int??.self, property: 2)
@@ -75,7 +76,7 @@ struct PrimitivesTests {
 
     @Test("Int???")
     func testTripleOptionalIntGetSet() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         database.testGetSet(nil, of: Int???.self, property: 1)
         database.testGetSet(.some(nil), of: Int???.self, property: 2)

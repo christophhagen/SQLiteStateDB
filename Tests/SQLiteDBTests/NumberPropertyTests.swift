@@ -1,6 +1,7 @@
 import CoreFoundation
 import Testing
 import StateModel
+import SQLiteDB
 
 @Model(id: 1)
 private final class NumberModel {
@@ -55,7 +56,7 @@ struct NumberPropertyTests {
 
     @Test("Int")
     func testPropertyGetSetInt() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model: NumberModel = database.create(id: 123)
         #expect(model.int == 0)
@@ -67,7 +68,7 @@ struct NumberPropertyTests {
 
     @Test("Int8")
     func testPropertyGetSetInt8() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model: NumberModel = database.create(id: 123)
         #expect(model.int8 == 0)
@@ -79,7 +80,7 @@ struct NumberPropertyTests {
 
     @Test("Int16")
     func testPropertyGetSetInt16() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model: NumberModel = database.create(id: 123)
         #expect(model.int16 == 0)
@@ -91,7 +92,7 @@ struct NumberPropertyTests {
 
     @Test("Int32")
     func testPropertyGetSetInt32() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model: NumberModel = database.create(id: 123)
         #expect(model.int32 == 0)
@@ -103,7 +104,7 @@ struct NumberPropertyTests {
 
     @Test("Int64")
     func testPropertyGetSetInt64() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model: NumberModel = database.create(id: 123)
         #expect(model.int64 == 0)
@@ -115,7 +116,7 @@ struct NumberPropertyTests {
 
     @Test("UInt")
     func testPropertyGetSetUInt() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model: NumberModel = database.create(id: 123)
         #expect(model.uint == 0)
@@ -127,7 +128,7 @@ struct NumberPropertyTests {
 
     @Test("UInt8")
     func testPropertyGetSetUInt8() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model: NumberModel = database.create(id: 123)
         #expect(model.uint8 == 0)
@@ -139,7 +140,7 @@ struct NumberPropertyTests {
 
     @Test("UInt16")
     func testPropertyGetSetUInt16() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model: NumberModel = database.create(id: 123)
         #expect(model.uint16 == 0)
@@ -151,7 +152,7 @@ struct NumberPropertyTests {
 
     @Test("UInt32")
     func testPropertyGetSetUInt32() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model: NumberModel = database.create(id: 123)
         #expect(model.uint32 == 0)
@@ -163,7 +164,7 @@ struct NumberPropertyTests {
 
     @Test("UInt64")
     func testPropertyGetSetUInt64() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model: NumberModel = database.create(id: 123)
         #expect(model.uint64 == 0)
@@ -175,7 +176,7 @@ struct NumberPropertyTests {
 
     @Test("Double")
     func testPropertyGetSetDouble() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model: NumberModel = database.create(id: 123)
         #expect(model.double == 0)
@@ -187,7 +188,7 @@ struct NumberPropertyTests {
 
     @Test("Float")
     func testPropertyGetSetFloat() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model: NumberModel = database.create(id: 123)
         #expect(model.float == 0)
@@ -200,7 +201,7 @@ struct NumberPropertyTests {
     @available(macOS 11.0, iOS 14.0, watchOS 7.0, tvOS 14.0, *)
     @Test("Float16")
     func testPropertyGetSetFloat16() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model: NumberModel = database.create(id: 123)
         #expect(model.float16 == 0)
@@ -213,7 +214,7 @@ struct NumberPropertyTests {
 #if canImport(CoreGraphics)
     @Test("CGFloat")
     func testPropertyGetSetCGFloat() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
 
         let model: NumberModel = database.create(id: 123)
         #expect(model.cgFloat == 0)

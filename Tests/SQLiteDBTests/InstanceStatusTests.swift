@@ -15,7 +15,7 @@ struct InstanceStatusTests {
 
     @Test("Get/set non-instance property")
     func testInstanceStatusProperty() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
         let instance: InstanceModel = database.create(id: 123)
 
         #expect(instance.state == .deleted)
@@ -27,7 +27,7 @@ struct InstanceStatusTests {
 
     @Test("Get/set non-status on instance path")
     func testNonStatusInstancePathProperty() throws {
-        let database = try TestDatabase()
+        let database = try SQLiteDatabase()
         let path = Path(model: 1, instance: 1, property: Int.instanceId)
         let value: Int? = database.get(path)
         #expect(value == nil)
