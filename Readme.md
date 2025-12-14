@@ -23,43 +23,9 @@ Integrate this package like you would any other:
 ## Usage
 
 Consult the [StateModel Documentation](https://github.com/christophhagen/StateModel#database-definition) on how to define a model database.
-
-### Path components
-
-The current implementation of `SQLiteDatabase` only supports path components that can be represented as SQLite values, including `Int` and `String`.
-You can therefore define a typealias to specify your desired types:
-```swift
-typealias MyDatabase = SQLiteDatabase<Int, Int, Int>
-```
-
-In principle `SQLiteDatabase` can be used with any type that can be represented as a SQLite value.
-For some types, you have to conform them to `SQLite.Value`:
-
-```swift
-extension UInt32: @retroactive Value {
-
-    public typealias Datatype = Int
-
-    public static let declaredDatatype = "INTEGER"
-
-    public static func fromDatatypeValue(_ datatypeValue: Int) throws -> UInt32 {
-        UInt32(datatypeValue)
-    }
-
-    public var datatypeValue: Int {
-        Int(self)
-    }
-}
-```
-
-Additionally, some custom types to be used for property keys need to state conformance with `PropertyKeyType`:
-
-```swift
-extension String: @retroactive PropertyKeyType {
-
-    public static let instanceId: String = "status"
-}
-```
+The library provides different implementations depending on the feature set required.
+`SQLiteDatabase` offers basic value storage and conforms to `Database`, while `SQLiteTimestampedDatabase` also stores the last modified timestamp for each property, but no historic values.
+For features like `HistoryView`, use a `SQLiteHistoryDatabase` instead.
 
 ### Encoder and Decoder
 
@@ -67,11 +33,10 @@ The SQLite database stores natively supported types in separate tables, e.g. all
 For types that can't be natively represented, each value is encoded to binary data before insertion.
 For these operations you need to supply an encoder and decoder, which are provided to the initializer:
 ```swift
-SQLiteDatabase.init(encoder: any GenericEncoder, decoder: any GenericDecoder)
+SQLiteDatabase(file: URL, encoder: any GenericEncoder, decoder: any GenericDecoder)
 ```
 
-`GenericEncoder` and `GenericDecoder` are types that provide the required operations.
-There are a few types that can readily be used.
+The `GenericEncoder` and `GenericDecoder` protocols are defined by the `StateModel` library, and a few basic encoders can be used directly. 
 
 #### `JSONEncoder` and `JSONDecoder`
 
@@ -127,36 +92,8 @@ extension BinaryEncoder: GenericEncoder { }
 extension BinaryDecoder: GenericDecoder { }
 ```
 
-### Database specification
-
-You can define a typealias to substitute your chosen encoding types:
-```swift
-typealias MyDatabase = SQLiteDatabase<Int, Int, Int>
-```
-
-Now you can continue to define your model types:
-
-```swift
-typealias MyModel = Model<Int, Int, Int>
-```
-
-With these definitions you are ready to [define your models](https://github.com/christophhagen/StateModel#model-definition):
-
-```swift
-final class User: MyModel {
-
-    static let modelId = 1
-
-    @Property(id: 42)
-    var name: String
-}
-```
-
 ### Caching
 
-There is an additional class `CachedSQLiteDatabase`, which can cache property values so that the database doesn't need to be queried as often.
-It has a generic cache type, which must conform to `SQLiteCache`.
-
-You can either implement your own cache, or use one of:
-- `AnyCache`: Very simple in memory cache with a maximum capacity and LRU eviction when full
-- `BasicCache`: Simple caches for different SQLite types with individual sizes and LRU eviction
+To improve query times for repeated access to the same properties, it is recommended to perform caching.
+`StateModel` already provides a `CachedDatabase` wrapper, that can be used with `SQLiteDatabase`.
+You can use the provided caches, or implement your own `DatabaseCache`.
